@@ -45,7 +45,7 @@ namespace AK.Wwise.Waapi
         {
             try
             {
-                AK.Wwise.Waapi.JsonClient client = new AK.Wwise.Waapi.JsonClient();
+                AK.Wwise.Waapi.Client client = new AK.Wwise.Waapi.Client();
 
                 // Try to connect to running instance of Wwise on localhost, default port
                 await client.Connect();
@@ -57,7 +57,7 @@ namespace AK.Wwise.Waapi
                 };
 
                 // Simple RPC call
-                JObject info = await client.Call(ak.wwise.core.getInfo, null, null);
+                string info = await client.Call(ak.wwise.core.getInfo, null, null);
                 System.Console.WriteLine(info);
                 // JObject profilerStart = await client.Call(ak.wwise.core.profiler.startCapture);
 
@@ -72,16 +72,14 @@ namespace AK.Wwise.Waapi
                 // Build WAQL query dynamically
                 var conditions = string.Join(" or ", propertiesToReset.Keys.Select(p => $"{p} = true"));
 
-                var query = new JObject(
-                        new JProperty("waql", $"$ from type actormixer where {conditions}"));
+                string query = $"waql: $ from type actormixer where {conditions}";
 
-                var options = new JObject(
-                    new JProperty("return", new string[] { "name", "id" }));
+                var options = $"return: ${new string[] { "name", "id" }}";
 
-                JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
+                string result = await client.Call(ak.wwise.core.@object.get, query, options);
                 System.Console.WriteLine(result);
 
-                if (result["return"] is JArray resultsArray && resultsArray.Any())
+                /*if (result["return"] is JArray resultsArray && resultsArray.Any())
                 {
                     string userInput;
 
@@ -117,7 +115,7 @@ namespace AK.Wwise.Waapi
                 else
                 {
                     Console.WriteLine("No actor mixers to sanitize found. Good job!");
-                }
+                }*/
 
                 System.Console.WriteLine("Done.");
             }
