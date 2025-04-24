@@ -28,6 +28,7 @@ the specific language governing permissions and limitations under the License.
 
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AK.Wwise.Waapi
@@ -43,6 +44,7 @@ namespace AK.Wwise.Waapi
         {
             try
             {
+
                 AK.Wwise.Waapi.JsonClient client = new AK.Wwise.Waapi.JsonClient();
 
                 // Try to connect to running instance of Wwise on localhost, default port
@@ -57,8 +59,69 @@ namespace AK.Wwise.Waapi
                 // Simple RPC call
                 JObject info = await client.Call(ak.wwise.core.getInfo, null, null);
                 System.Console.WriteLine(info);
+                // JObject profilerStart = await client.Call(ak.wwise.core.profiler.startCapture);
 
-                // Create an object for our tests, using C# anonymous types
+                // TEST Get all actor-mixer objects in project
+                var query = new JObject(
+                        new JProperty("waql", "$ \"\\Actor-Mixer Hierarchy\" select descendants where name = /^New/"));
+
+                var options = new JObject(
+                    new JProperty("return", new string[] { "name" }));
+
+                JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
+                //System.Console.WriteLine(result["return"]["name"]);
+                System.Console.WriteLine(result);
+
+                // TEST 2
+                var query2 = new JObject(
+                        new JProperty("waql", "$ from type actormixer"));
+
+                var options2 = new JObject(
+                    new JProperty("return", new string[] { "name" }));
+
+                JObject result2 = await client.Call(ak.wwise.core.@object.get, query2, options2);
+                //System.Console.WriteLine(result["return"]["name"]);
+                System.Console.WriteLine(result2);
+
+                // Check if same as parent
+                var query3 = new JObject(
+                        new JProperty("waql", "$ from type actormixer where OverridePositioning = true or OverrideEffect = true"));
+
+                var options3 = new JObject(
+                    new JProperty("return", new string[] { "id" }));
+
+                JObject result3 = await client.Call(ak.wwise.core.@object.get, query3, options3);
+                System.Console.WriteLine(result3);
+
+                //JObject actorMixers = await client.Call(ak.wwise.core.@object.getTypes);
+                //System.Console.WriteLine(actorMixers);
+                string userInput;
+
+                //var actorsToSanitazie = new List<string>();
+                //actorsToSanitazie = result3.Property("id").Value.WriteTo(Newtonsoft.Json.JsonWriter writer);
+
+                    Console.WriteLine("Would you like to reset overrides? (Y/N)");
+                    userInput = Console.ReadLine();
+                    if (userInput.ToLower() == "y")
+                    {
+                        
+                        foreach (var actor in result3["return"])
+                        {
+                        //System.Console.WriteLine(actor);
+                        await client.Call(ak.wwise.core.@object.setProperty,
+                new JObject(
+                    new JProperty("property", "OverridePositioning"),
+                    new JProperty("object", actor["id"]),
+                    new JProperty("value", false)),
+                null);
+                    }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Cancelled. Press enter to continue");
+                    }
+
+                /*// Create an object for our tests, using C# anonymous types
                 var testObj = await client.Call(
                     ak.wwise.core.@object.create,
                     new
@@ -180,10 +243,12 @@ namespace AK.Wwise.Waapi
                     ak.wwise.core.@object.delete,
                     new JObject(new JProperty("object", testObj["id"])), null);
 
+                JObject profilerStop = await client.Call(ak.wwise.core.profiler.stopCapture);
+
                 await client.Unsubscribe(nameSubscriptionId);
                 await client.Unsubscribe(propertySubscriptionId);
 
-                await client.Close();
+                await client.Close();*/
 
                 System.Console.WriteLine("done");
             }
