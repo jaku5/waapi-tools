@@ -29,6 +29,7 @@ the specific language governing permissions and limitations under the License.
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AK.Wwise.Waapi
@@ -44,7 +45,6 @@ namespace AK.Wwise.Waapi
         {
             try
             {
-
                 AK.Wwise.Waapi.JsonClient client = new AK.Wwise.Waapi.JsonClient();
 
                 // Try to connect to running instance of Wwise on localhost, default port
@@ -61,196 +61,65 @@ namespace AK.Wwise.Waapi
                 System.Console.WriteLine(info);
                 // JObject profilerStart = await client.Call(ak.wwise.core.profiler.startCapture);
 
-                // TEST Get all actor-mixer objects in project
+                // Define all properties we want to check and potentially reset
+                var propertiesToReset = new Dictionary<string, object>
+            {
+                { "OverridePositioning", false },
+                { "OverrideEffect", false }
+                // Add more properties as needed
+            };
+
+                // Build WAQL query dynamically
+                var conditions = string.Join(" or ", propertiesToReset.Keys.Select(p => $"{p} = true"));
+
                 var query = new JObject(
-                        new JProperty("waql", "$ \"\\Actor-Mixer Hierarchy\" select descendants where name = /^New/"));
+                        new JProperty("waql", $"$ from type actormixer where {conditions}"));
 
                 var options = new JObject(
-                    new JProperty("return", new string[] { "name" }));
+                    new JProperty("return", new string[] { "name", "id" }));
 
                 JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
-                //System.Console.WriteLine(result["return"]["name"]);
                 System.Console.WriteLine(result);
 
-                // TEST 2
-                var query2 = new JObject(
-                        new JProperty("waql", "$ from type actormixer"));
+                if (result["return"] is JArray resultsArray && resultsArray.Any())
+                {
+                    string userInput;
 
-                var options2 = new JObject(
-                    new JProperty("return", new string[] { "name" }));
-
-                JObject result2 = await client.Call(ak.wwise.core.@object.get, query2, options2);
-                //System.Console.WriteLine(result["return"]["name"]);
-                System.Console.WriteLine(result2);
-
-                // Check if same as parent
-                var query3 = new JObject(
-                        new JProperty("waql", "$ from type actormixer where OverridePositioning = true or OverrideEffect = true"));
-
-                var options3 = new JObject(
-                    new JProperty("return", new string[] { "id" }));
-
-                JObject result3 = await client.Call(ak.wwise.core.@object.get, query3, options3);
-                System.Console.WriteLine(result3);
-
-                //JObject actorMixers = await client.Call(ak.wwise.core.@object.getTypes);
-                //System.Console.WriteLine(actorMixers);
-                string userInput;
-
-                //var actorsToSanitazie = new List<string>();
-                //actorsToSanitazie = result3.Property("id").Value.WriteTo(Newtonsoft.Json.JsonWriter writer);
-
-                    Console.WriteLine("Would you like to reset overrides? (Y/N)");
+                    Console.WriteLine("Would you like to reset overrides? (y/n)");
                     userInput = Console.ReadLine();
                     if (userInput.ToLower() == "y")
                     {
-                        
-                        foreach (var actor in result3["return"])
+
+                        foreach (var actor in result["return"])
                         {
-                        //System.Console.WriteLine(actor);
-                        await client.Call(ak.wwise.core.@object.setProperty,
-                new JObject(
-                    new JProperty("property", "OverridePositioning"),
-                    new JProperty("object", actor["id"]),
-                    new JProperty("value", false)),
-                null);
-                    }
+                            Console.WriteLine($"\nProcessing: {actor["name"]} (ID: {actor["id"]})");
+
+                            foreach (var property in propertiesToReset)
+                            {
+                                var propertyName = property.Key;
+                                var propertyValue = property.Value;
+
+                                await client.Call(ak.wwise.core.@object.setProperty,
+                                    new JObject(
+                                        new JProperty("property", propertyName),
+                                        new JProperty("object", actor["id"]),
+                                        new JProperty("value", propertyValue)),
+                                    null);
+                            }
+                        }
+
                     }
                     else
                     {
-                        Console.WriteLine("Cancelled. Press enter to continue");
+                        Console.WriteLine("User cancelled.");
                     }
-
-                /*// Create an object for our tests, using C# anonymous types
-                var testObj = await client.Call(
-                    ak.wwise.core.@object.create,
-                    new
-                    {
-                        name = "WaapiObject",
-                        parent = @"\Actor-Mixer Hierarchy\Default Work Unit",
-                        type = "ActorMixer",
-                        onNameConflict = "rename"
-                    }, null);
-
-                System.Console.WriteLine(testObj["id"]);
-
-                // Subscribe to name changes
-                int nameSubscriptionId = await client.Subscribe(
-                    ak.wwise.core.@object.nameChanged,
-                    null,
-                    (JObject publication) =>
-                    {
-                        System.Console.WriteLine($"Name changed: {publication}");
-                    });
-
-                // Subscribe to property changes
-                int propertySubscriptionId = await client.Subscribe(
-                    ak.wwise.core.@object.propertyChanged,
-                    new JObject(
-                        new JProperty("property", "Volume"),
-                        new JProperty("object", testObj["id"])),
-                    (JObject publication) =>
-                    {
-                        System.Console.WriteLine($"Property '{publication["property"]}' changed: {publication["new"]}");
-                    });
-
-
-                // Set name using C# anonymous types
-                try
-                {
-                    await client.Call(
-                        ak.wwise.core.@object.setName,
-                        new
-                        {
-                            @object = testObj["id"],
-                            value = "NewName"
-    
-                        }, null);
-
-                    // Undo the set name, using JObject constructor
-                    await client.Call(
-                        ak.wwise.ui.commands.execute,
-                        new JObject(new JProperty("command", "Undo")), null);
                 }
-                catch (AK.Wwise.Waapi.Wamp.ErrorException e)
+                else
                 {
-                    System.Console.Write(e.Message);
-                    // Ignore the error, it is possible we have a name conflict
+                    Console.WriteLine("No actor mixers to sanitize found. Good job!");
                 }
 
-                // Set property using anonymous type
-                await client.Call(
-                    ak.wwise.core.@object.setProperty,
-                    new
-                    {
-                        @property = "Volume",
-                        @object = testObj["id"],
-                        value = 6
-                    }, null);
-
-                // Setting a property using dynamic types
-                {
-                    dynamic args = new JObject();
-                    args.property = "Volume";
-                    args.@object = testObj["id"];
-                    args.value = 9;
-
-                    // Set property with JObject
-                    await client.Call(ak.wwise.core.@object.setProperty, args, null);
-                }
-
-                // Setting a property using JObject constructor
-                await client.Call(ak.wwise.core.@object.setProperty,
-                    new JObject(
-                        new JProperty("property", "Volume"),
-                        new JProperty("object", testObj["id"]),
-                        new JProperty("value", 10)),
-                    null);
-
-                {
-                    // Query the volume, using JObject constructor
-                    var query = new JObject(
-                        new JProperty("from", new JObject(
-                            new JProperty("id", new JArray(new string[] { testObj["id"].ToString() })))));
-
-                    var options = new JObject(
-                        new JProperty("return", new string[] { "name", "id", "@Volume" }));
-
-                    JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
-                    System.Console.WriteLine(result["return"][0]["@Volume"]);
-                }
-
-                {
-                    // Query the project using anonymous objects
-                    var query = new
-                    {
-                        from = new
-                        {
-                            id = new string[] { testObj["id"].ToString() }
-                        }
-                    };
-                    var options = new
-                    {
-                        @return = new string[] { "name", "id", "@Volume", "path" }
-                    };
-
-                    JObject jresult = await client.Call(ak.wwise.core.@object.get, query, options);
-                    System.Console.WriteLine(jresult["return"][0]["@Volume"]);
-                }
-
-                // Clean up the created objects!
-                await client.Call(
-                    ak.wwise.core.@object.delete,
-                    new JObject(new JProperty("object", testObj["id"])), null);
-
-                JObject profilerStop = await client.Call(ak.wwise.core.profiler.stopCapture);
-
-                await client.Unsubscribe(nameSubscriptionId);
-                await client.Unsubscribe(propertySubscriptionId);
-
-                await client.Close();*/
-
-                System.Console.WriteLine("done");
+                System.Console.WriteLine("Done.");
             }
             catch (Exception e)
             {
