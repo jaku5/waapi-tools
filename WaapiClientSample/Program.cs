@@ -26,7 +26,6 @@ the specific language governing permissions and limitations under the License.
 
 *******************************************************************************/
 
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,9 +71,11 @@ namespace AK.Wwise.Waapi
                 // Build WAQL query dynamically
                 var conditions = string.Join(" or ", propertiesToReset.Keys.Select(p => $"{p} = true"));
 
-                string query = $"waql: $ from type actormixer where {conditions}";
+                // Properly format the query as a JSON string
+                string query = $"{{ \"waql\": \"$ from type actormixer where {conditions}\" }}";
 
-                var options = $"return: ${new string[] { "name", "id" }}";
+                // Properly format the options as a JSON string
+                var options = $"{{ \"return\": [\"name\", \"id\"] }}";
 
                 string result = await client.Call(ak.wwise.core.@object.get, query, options);
                 System.Console.WriteLine(result);
