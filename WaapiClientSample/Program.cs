@@ -118,7 +118,9 @@ namespace AK.Wwise.Waapi
                         foreach (var actor in actorsToConvert)
                         {
                             var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
-                            
+                            var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
+
+
                             Console.WriteLine($"Moving children of: {actor}");
                             var queryChildren = new JObject(
                                 new JProperty("waql", $"$ {actorPath} select children"));
@@ -131,8 +133,6 @@ namespace AK.Wwise.Waapi
                             {
                                 foreach (var child in resultChildren["return"])
                                 {
-                                    var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
-
                                     Console.WriteLine($"\nMoving: {child["name"]} (ID: {child["id"]})");
 
                                     await client.Call(ak.wwise.core.@object.move, new JObject(
@@ -146,9 +146,9 @@ namespace AK.Wwise.Waapi
                                  new JProperty("object", actor["id"])));
                             
                             // Rename the folder
-                            //await client.Call(ak.wwise.core.@object.setName, new JObject(
-                            //    new JProperty("object", actor["parent.id"]),
-                            //    new JProperty("valu", actor["parent.name"])));
+                            await client.Call(ak.wwise.core.@object.setName, new JObject(
+                                new JProperty("object", folderPath),
+                                new JProperty("value", actor["name"])));
                         }
                     }
                     else
