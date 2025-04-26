@@ -65,42 +65,41 @@ namespace AK.Wwise.Waapi
                     new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
 
                 JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
-                System.Console.WriteLine(result);
+                //System.Console.WriteLine(result);
 
                 // Check for actor mixers diff against their parent
                 if (result["return"] is JArray resultsArray && resultsArray.Any())
                 {
+                    var actorsToConvert = new JArray();
+
+                    foreach (var actor in result["return"])
+                    {
+                        Console.WriteLine($"\nProcessing: {actor["name"]} (ID: {actor["id"]})");
+                        JObject diff = await client.Call(ak.wwise.core.@object.diff,
+                                                        new JObject(
+                                                            new JProperty("source", actor["id"]),
+                                                            new JProperty("target", actor["parent.id"])),
+                                                        null);
+
+                        if (diff["properties"] is JArray diffArray && !diffArray.Any())
+                        {
+                            //Console.WriteLine($"Actors to convert: {diff}");
+                            //actorsToConvert.Add(actor["id"]);
+                            actorsToConvert.Add(new JObject(
+                                new JProperty("id", actor["id"]),
+                                new JProperty("name", actor["name"]),
+                                new JProperty("path", actor["path"]),
+                                new JProperty("parent.id", actor["parent.id"]),
+                                new JProperty("parent.name", actor["parent.name"])));
+                        }
+                    }
+                    Console.WriteLine($"Actors to convert: {actorsToConvert}");
                     string userInput;
 
-                    Console.WriteLine("Would you like to convert actors to folders? (y/n)");
+                    Console.WriteLine("Would you like to convert these actors to virtual folders? (y/n)");
                     userInput = Console.ReadLine();
                     if (userInput.ToLower() == "y")
                     {
-                        var actorsToConvert = new JArray();
-
-                        foreach (var actor in result["return"])
-                        {
-                            Console.WriteLine($"\nProcessing: {actor["name"]} (ID: {actor["id"]})");
-                            JObject diff = await client.Call(ak.wwise.core.@object.diff,
-                                                            new JObject(
-                                                                new JProperty("source", actor["id"]),
-                                                                new JProperty("target", actor["parent.id"])),
-                                                            null);
-
-                            if (diff["properties"] is JArray diffArray && !diffArray.Any())
-                            {
-                                Console.WriteLine(diff);
-                                //actorsToConvert.Add(actor["id"]);
-                                actorsToConvert.Add(new JObject(
-                                    new JProperty("id", actor["id"]),
-                                    new JProperty("name", actor["name"]),
-                                    new JProperty("path", actor["path"]),
-                                    new JProperty("parent.id", actor["parent.id"]),
-                                    new JProperty("parent.name", actor["parent.name"])));
-                            }                            
-                        }
-                        Console.WriteLine(actorsToConvert);
-
                         //Create a folder for each actor
                         foreach (var actor in actorsToConvert)
                         {
