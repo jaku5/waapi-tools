@@ -57,12 +57,12 @@ namespace AK.Wwise.Waapi
                     System.Console.WriteLine("We lost connection!");
                 };
 
-                // Gat all actor-mixers in the project
+                // Gat all actor-mixers canditates in the project
                 var query = new JObject(
-                        new JProperty("waql", "$ from type actormixer"));
+                        new JProperty("waql", "$ from type actormixer where parent.type:\"actormixer\""));
 
                 var options = new JObject(
-                    new JProperty("return", new string[] { "name", "id", "parent.name", "parent.id" }));
+                    new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
 
                 JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
                 System.Console.WriteLine(result);
@@ -93,6 +93,8 @@ namespace AK.Wwise.Waapi
                                 //actorsToConvert.Add(actor["id"]);
                                 actorsToConvert.Add(new JObject(
                                     new JProperty("id", actor["id"]),
+                                    new JProperty("name", actor["name"]),
+                                    new JProperty("path", actor["path"]),
                                     new JProperty("parent.id", actor["parent.id"]),
                                     new JProperty("parent.name", actor["parent.name"])));
                             }                            
@@ -101,12 +103,31 @@ namespace AK.Wwise.Waapi
 
                         foreach (var actor in actorsToConvert)
                         {
-                            var tempName = $"{actor["parent.name"]}Temp";
+                            var tempName = $"{actor["name"]}Temp";
                             Console.WriteLine($"Converting: {actor}");
                             await client.Call(ak.wwise.core.@object.create, new JObject(
                                 new JProperty("parent", actor["parent.id"]),
                                 new JProperty("type", "Folder"),
                                 new JProperty("name", tempName )));
+                        }
+
+                        // Copy children of the actor to the new folder
+                        var childrenToMove = new JArray();
+
+                        foreach (var actor in actorsToConvert)
+                        {
+                            var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
+                            // var parentId = $"\"{actor["parent.id"].ToString()}\"";
+                            Console.WriteLine($"Moving children of: {actor}");
+                            var queryChildren = new JObject(
+                                new JProperty("waql", $"$ {actorPath} select children"));
+
+                            //var optionsChildren = new JObject(
+                            //    new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
+
+                            JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
+
+                            Console.WriteLine($"Child: {resultChildren}");
                         }
                     }
                     else
