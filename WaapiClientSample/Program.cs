@@ -101,6 +101,7 @@ namespace AK.Wwise.Waapi
                         }
                         Console.WriteLine(actorsToConvert);
 
+                        //Create a folder for each actor
                         foreach (var actor in actorsToConvert)
                         {
                             var tempName = $"{actor["name"]}Temp";
@@ -111,23 +112,43 @@ namespace AK.Wwise.Waapi
                                 new JProperty("name", tempName )));
                         }
 
-                        // Copy children of the actor to the new folder
+                        // Get children of the actor
                         var childrenToMove = new JArray();
 
                         foreach (var actor in actorsToConvert)
                         {
                             var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
-                            // var parentId = $"\"{actor["parent.id"].ToString()}\"";
+                            
                             Console.WriteLine($"Moving children of: {actor}");
                             var queryChildren = new JObject(
                                 new JProperty("waql", $"$ {actorPath} select children"));
 
-                            //var optionsChildren = new JObject(
-                            //    new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
-
                             JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
 
                             Console.WriteLine($"Child: {resultChildren}");
+                            // Copy the children to the new folder
+                            if (resultChildren["return"] is JArray resultsArrayChildren && resultsArrayChildren.Any())
+                            {
+                                foreach (var child in resultChildren["return"])
+                                {
+                                    var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
+
+                                    Console.WriteLine($"\nMoving: {child["name"]} (ID: {child["id"]})");
+
+                                    await client.Call(ak.wwise.core.@object.move, new JObject(
+                                        new JProperty("object", child["id"]),
+                                        new JProperty("parent", folderPath)));
+                                }
+                            }
+                            // Delete the actor
+                            Console.WriteLine($"Deleting: {actor}");
+                            await client.Call(ak.wwise.core.@object.delete, new JObject(
+                                 new JProperty("object", actor["id"])));
+                            
+                            // Rename the folder
+                            //await client.Call(ak.wwise.core.@object.setName, new JObject(
+                            //    new JProperty("object", actor["parent.id"]),
+                            //    new JProperty("valu", actor["parent.name"])));
                         }
                     }
                     else
