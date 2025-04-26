@@ -29,6 +29,7 @@ the specific language governing permissions and limitations under the License.
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -56,58 +57,57 @@ namespace AK.Wwise.Waapi
                     System.Console.WriteLine("We lost connection!");
                 };
 
-                // Simple RPC call
-                JObject info = await client.Call(ak.wwise.core.getInfo, null, null);
-                System.Console.WriteLine(info);
-                // JObject profilerStart = await client.Call(ak.wwise.core.profiler.startCapture);
-
-                // Define all properties we want to check and potentially reset
-                var propertiesToReset = new Dictionary<string, object>
-            {
-                { "OverridePositioning", false },
-                { "OverrideEffect", false }
-                // Add more properties as needed
-            };
-
-                // Build WAQL query dynamically
-                var conditions = string.Join(" or ", propertiesToReset.Keys.Select(p => $"{p} = true"));
-
+                // Gat all actor-mixers in the project
                 var query = new JObject(
-                        new JProperty("waql", $"$ from type actormixer where {conditions}"));
+                        new JProperty("waql", "$ from type actormixer"));
 
                 var options = new JObject(
-                    new JProperty("return", new string[] { "name", "id" }));
+                    new JProperty("return", new string[] { "name", "id", "parent.name", "parent.id" }));
 
                 JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
                 System.Console.WriteLine(result);
 
+                // Check for actor mixers diff against their parent
                 if (result["return"] is JArray resultsArray && resultsArray.Any())
                 {
                     string userInput;
 
-                    Console.WriteLine("Would you like to reset overrides? (y/n)");
+                    Console.WriteLine("Would you like to convert actors to folders? (y/n)");
                     userInput = Console.ReadLine();
                     if (userInput.ToLower() == "y")
                     {
+                        var actorsToConvert = new JArray();
 
                         foreach (var actor in result["return"])
                         {
                             Console.WriteLine($"\nProcessing: {actor["name"]} (ID: {actor["id"]})");
+                            JObject diff = await client.Call(ak.wwise.core.@object.diff,
+                                                            new JObject(
+                                                                new JProperty("source", actor["id"]),
+                                                                new JProperty("target", actor["parent.id"])),
+                                                            null);
 
-                            foreach (var property in propertiesToReset)
+                            if (diff["properties"] is JArray diffArray && !diffArray.Any())
                             {
-                                var propertyName = property.Key;
-                                var propertyValue = property.Value;
-
-                                await client.Call(ak.wwise.core.@object.setProperty,
-                                    new JObject(
-                                        new JProperty("property", propertyName),
-                                        new JProperty("object", actor["id"]),
-                                        new JProperty("value", propertyValue)),
-                                    null);
-                            }
+                                Console.WriteLine(diff);
+                                //actorsToConvert.Add(actor["id"]);
+                                actorsToConvert.Add(new JObject(
+                                    new JProperty("id", actor["id"]),
+                                    new JProperty("parent.id", actor["parent.id"]),
+                                    new JProperty("parent.name", actor["parent.name"])));
+                            }                            
                         }
+                        Console.WriteLine(actorsToConvert);
 
+                        foreach (var actor in actorsToConvert)
+                        {
+                            var tempName = $"{actor["parent.name"]}Temp";
+                            Console.WriteLine($"Converting: {actor}");
+                            await client.Call(ak.wwise.core.@object.create, new JObject(
+                                new JProperty("parent", actor["parent.id"]),
+                                new JProperty("type", "Folder"),
+                                new JProperty("name", tempName )));
+                        }
                     }
                     else
                     {
