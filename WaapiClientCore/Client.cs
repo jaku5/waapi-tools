@@ -26,7 +26,7 @@ the specific language governing permissions and limitations under the License.
 
 *******************************************************************************/
 
-namespace AK.Wwise.Waapi
+namespace WaapiClientCore
 {
     /// <summary>
     /// The Waapi Client provide a core interface to Waapi using strings only. You will need to provide your own JSON serialization.
@@ -34,7 +34,7 @@ namespace AK.Wwise.Waapi
     /// </summary>
     public class Client
     {
-        private AK.Wwise.Waapi.Wamp wamp;
+        private Wamp wamp;
 
         public event Wamp.DisconnectedHandler Disconnected;
 
@@ -44,12 +44,12 @@ namespace AK.Wwise.Waapi
         /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         public async System.Threading.Tasks.Task Connect(
             string uri = "ws://localhost:8080/waapi", 
-            int timeout = System.Int32.MaxValue)
+            int timeout = int.MaxValue)
         {
             if(wamp != null)
                 throw new System.Exception("Connection is already established");
 
-            wamp = new Waapi.Wamp();
+            wamp = new Wamp();
             wamp.Disconnected += Wamp_Disconnected;
             await wamp.Connect(uri, timeout);
         }
@@ -65,7 +65,7 @@ namespace AK.Wwise.Waapi
         /// <summary>Close the connection.</summary>
         /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         public async System.Threading.Tasks.Task Close(
-            int timeout = System.Int32.MaxValue)
+            int timeout = int.MaxValue)
         {
             if (wamp == null)
                 throw new System.Exception("WAMP connection is not established");
@@ -97,7 +97,7 @@ namespace AK.Wwise.Waapi
             string uri, 
             string args = "{}", 
             string options = "{}", 
-            int timeout = System.Int32.MaxValue)
+            int timeout = int.MaxValue)
         {
             if (wamp == null)
                 throw new System.Exception("WAMP connection is not established");
@@ -120,7 +120,7 @@ namespace AK.Wwise.Waapi
             string topic, 
             string options, 
             Wamp.PublishHandler publishHandler, 
-            int timeout = System.Int32.MaxValue)
+            int timeout = int.MaxValue)
         {
             if (wamp == null)
                 throw new System.Exception("WAMP connection is not established");
@@ -135,7 +135,7 @@ namespace AK.Wwise.Waapi
         /// <param name="subscriptionId">The subscription id received from the initial subscription.</param>
         public async System.Threading.Tasks.Task Unsubscribe(
             int subscriptionId, 
-            int timeout = System.Int32.MaxValue)
+            int timeout = int.MaxValue)
         {
             if (wamp == null)
                 throw new System.Exception("WAMP connection is not established");

@@ -30,8 +30,9 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using WaapiClientJson;
 
-namespace AK.Wwise.Waapi
+namespace ActormixerSanitizer
 {
     class Program
     {
@@ -44,7 +45,7 @@ namespace AK.Wwise.Waapi
         {
             try
             {
-                AK.Wwise.Waapi.JsonClient client = new AK.Wwise.Waapi.JsonClient();
+                JsonClient client = new JsonClient();
 
                 // Try to connect to running instance of Wwise on localhost, default port
                 await client.Connect();

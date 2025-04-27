@@ -1,7 +1,7 @@
 ﻿   <Project Sdk="Microsoft.NET.Sdk">
      <PropertyGroup>
-       <OutputType>Library</OutputType> <!-- Change to Exe if it's a console app -->
-       <TargetFramework>net9.0</TargetFramework> <!-- Replace netX.X with the appropriate target framework, e.g., net7.0 or netstandard2.1 -->
+       <OutputType>Library</OutputType>
+       <TargetFramework>net9.0</TargetFramework>
      </PropertyGroup>
      <ItemGroup>
      <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
