@@ -28,8 +28,6 @@ the specific language governing permissions and limitations under the License.
 
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -54,7 +52,7 @@ namespace AK.Wwise.Waapi
                 // Register for connection lost event
                 client.Disconnected += () =>
                 {
-                    System.Console.WriteLine("We lost connection!");
+                    Console.WriteLine("We lost connection!");
                 };
 
                 // Gat all actor-mixers canditates in the project
@@ -65,7 +63,6 @@ namespace AK.Wwise.Waapi
                     new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
 
                 JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
-                //System.Console.WriteLine(result);
 
                 // Check for actor mixers diff against their parent
                 if (result["return"] is JArray resultsArray && resultsArray.Any())
@@ -83,8 +80,6 @@ namespace AK.Wwise.Waapi
 
                         if (diff["properties"] is JArray diffArray && !diffArray.Any())
                         {
-                            //Console.WriteLine($"Actors to convert: {diff}");
-                            //actorsToConvert.Add(actor["id"]);
                             actorsToConvert.Add(new JObject(
                                 new JProperty("id", actor["id"]),
                                 new JProperty("name", actor["name"]),
@@ -94,13 +89,15 @@ namespace AK.Wwise.Waapi
                         }
                     }
                     Console.WriteLine($"Actors to convert: {actorsToConvert}");
+                    Console.WriteLine("Would you like to convert these actors to virtual folders? (y/n)");
+
                     string userInput;
 
-                    Console.WriteLine("Would you like to convert these actors to virtual folders? (y/n)");
                     userInput = Console.ReadLine();
+
                     if (userInput.ToLower() == "y")
                     {
-                        //Create a folder for each actor
+                        // Create a folder for each actor
                         foreach (var actor in actorsToConvert)
                         {
                             var tempName = $"{actor["name"]}Temp";
@@ -119,14 +116,15 @@ namespace AK.Wwise.Waapi
                             var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
                             var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
 
-
                             Console.WriteLine($"Moving children of: {actor}");
+
                             var queryChildren = new JObject(
                                 new JProperty("waql", $"$ {actorPath} select children"));
 
                             JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
 
                             Console.WriteLine($"Child: {resultChildren}");
+
                             // Copy the children to the new folder
                             if (resultChildren["return"] is JArray resultsArrayChildren && resultsArrayChildren.Any())
                             {
@@ -160,11 +158,12 @@ namespace AK.Wwise.Waapi
                     Console.WriteLine("No actor mixers to sanitize found. Good job!");
                 }
 
-                System.Console.WriteLine("Done.");
+                Console.WriteLine("Done. Press any key to exit.");
+                Console.ReadLine();
             }
             catch (Exception e)
             {
-                System.Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine(e.Message);
             }
         }
     }
