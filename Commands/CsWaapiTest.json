@@ -1,0 +1,19 @@
+{
+    "commands":[
+        {
+            "id":"jpa.actormixer-sanitizer",
+            "displayName":"Convert",
+            "defaultShortcut":"",
+            "program":"dotnet",
+            "startMode":"SingleSelectionSingleProcess",
+            "args":"run --project ${CurrentCommandDirectory}\\..\\WaapiClientSample\\WaapiClientSample.csproj",
+            "cwd":"",
+            "contextMenu":{
+                    "basePath":"WAAPI Tools"
+                },          
+            "mainMenu":{
+                    "basePath":"Extra"
+                }
+        }      
+    ]
+}
