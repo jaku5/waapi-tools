@@ -79,7 +79,20 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                                                             new JProperty("target", actor["parent.id"])),
                                                         null);
 
-                        if (diff["properties"] is JArray diffArray && !diffArray.Any())
+                        // Check if the actor is referenced by an event
+                        var referenceQuery = new JObject(
+                            new JProperty("waql", $"$ \"{actor["id"]}\" select referencesTo"));
+
+                        Console.WriteLine(referenceQuery);
+
+                        var referenceOptions = new JObject(
+                            new JProperty("return", new string[] { "id" }));
+
+                        JObject referenceResult = await client.Call(ak.wwise.core.@object.get, referenceQuery, referenceOptions);
+
+                        Console.WriteLine(referenceResult);
+
+                        if (diff["properties"] is JArray diffArray && !diffArray.Any() && referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any())
                         {
                             actorsToConvert.Add(new JObject(
                                 new JProperty("id", actor["id"]),
@@ -102,7 +115,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         foreach (var actor in actorsToConvert)
                         {
                             var tempName = $"{actor["name"]}Temp";
-                            Console.WriteLine($"\nConverting: {actor["name"]}");
+                            Console.WriteLine($"\nConverting: {actor["name"]} (ID: {actor["id"]})");
                             await client.Call(ak.wwise.core.@object.create, new JObject(
                                 new JProperty("parent", actor["parent.id"]),
                                 new JProperty("type", "Folder"),
@@ -117,7 +130,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                             var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
                             var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
 
-                            Console.WriteLine($"\nMoving children of: {actor["name"]}");
+                            Console.WriteLine($"\nMoving children of: {actor["name"]} (ID: {actor["id"]})");
 
                             var queryChildren = new JObject(
                                 new JProperty("waql", $"$ {actorPath} select children"));
@@ -158,7 +171,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                     PrintNoCandidatesMessage();
                 }
 
-                PrintExitMessage();
+                ExitProgram();
             }
             catch (Exception e)
             {
@@ -173,9 +186,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             if (!actorsToConvert.Any())
             {
                 PrintNoCandidatesMessage();
-                PrintExitMessage();
-
-                return;
+                ExitProgram();
             }
 
             else
@@ -188,10 +199,12 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             }
         }
 
-        private static void PrintExitMessage()
+        private static void ExitProgram()
         {
             Console.WriteLine("\nDone. Press any key to exit.");
             Console.ReadLine();
+
+            Environment.Exit(0);
         }
         private static void PrintNoCandidatesMessage()
         {
