@@ -45,147 +45,21 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         {
             try
             {
-                JsonClient client = new JsonClient();
+                JsonClient client = await InitializeClientAsync();
+                JArray actors = await GetActorMixersAsync(client);
 
-                // Try to connect to running instance of Wwise on localhost, default port
-                await client.Connect();
-
-                // Register for connection lost event
-                client.Disconnected += () =>
+                if (actors != null && actors.Any())
                 {
-                    Console.WriteLine("We lost connection!");
-                };
-
-                // Gat all actor-mixers canditates in the project
-                var query = new JObject(
-                        new JProperty("waql", "$ from type actormixer where parent.type:\"actormixer\""));
-
-                var options = new JObject(
-                    new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
-
-                JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
-
-                // Check for actor mixers diff against their parent
-                if (result["return"] is JArray resultsArray && resultsArray.Any())
-                {
-                    var actorsToConvert = new JArray();
-
-                    foreach (var actor in result["return"])
-                    {
-                        Console.WriteLine($"Processing: {actor["name"]} (ID: {actor["id"]})");
-                        JObject diff = await client.Call(ak.wwise.core.@object.diff,
-                                                        new JObject(
-                                                            new JProperty("source", actor["id"]),
-                                                            new JProperty("target", actor["parent.id"])),
-                                                        null);
-
-
-                        // Check for states differences
-                        var stateQuery = new JObject(
-                            new JProperty("waql", $"$ \"{actor["id"]}\""));
-
-                        var stateOptions = new JObject(
-                           new JProperty("return", new string[] { "stateGroups" }));
-
-                        JObject stateResult = await client.Call(ak.wwise.core.@object.get, stateQuery, stateOptions);
-
-                        var parentStateQuery = new JObject(
-                            new JProperty("waql", $"$ \"{actor["parent.id"]}\""));
-
-                        var parentStateOptions = new JObject(
-                           new JProperty("return", new string[] { "stateGroups" }));
-
-                        JObject parentStateResult = await client.Call(ak.wwise.core.@object.get, parentStateQuery, parentStateOptions);
-
-                        // Check if the actor is referenced by an event action
-                        var referenceQuery = new JObject(
-                            new JProperty("waql", $"$ \"{actor["id"]}\" select referencesTo where type:\"action\""));
-
-                        var referenceOptions = new JObject(
-                            new JProperty("return", new string[] { "id" }));
-
-                        JObject referenceResult = await client.Call(ak.wwise.core.@object.get, referenceQuery, referenceOptions);
-
-                        // Create a list of actors to convert 
-                        bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
-                        bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any();
-                        bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
-                        bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString();
-
-                        if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && hasNoStateDifferences)
-                        {
-                            actorsToConvert.Add(new JObject(
-                                new JProperty("id", actor["id"]),
-                                new JProperty("name", actor["name"]),
-                                new JProperty("path", actor["path"]),
-                                new JProperty("parent.id", actor["parent.id"]),
-                                new JProperty("parent.name", actor["parent.name"])));
-                        }
-                    }
-
+                    JArray actorsToConvert = await ProcessActorsAsync(client, actors);
                     DisplayActorsToConvert(actorsToConvert);
 
                     Console.WriteLine("\nWould you like to convert these actor-mixers to virtual folders? (y/n)");
-
-                    string userInput = Console.ReadLine();
-
-                    if (userInput.ToLower() == "y")
+                    if (Console.ReadLine()?.ToLower() == "y")
                     {
-                        // Create a folder for each actor
-                        foreach (var actor in actorsToConvert)
-                        {
-                            var tempName = $"{actor["name"]}Temp";
-
-                            Console.WriteLine($"\nConverting: {actor["name"]} (ID: {actor["id"]})");
-
-                            await client.Call(ak.wwise.core.@object.create, new JObject(
-                                new JProperty("parent", actor["parent.id"]),
-                                new JProperty("type", "Folder"),
-                                new JProperty("name", tempName )));
-                        }
-
-                        // Get children of the actor
-                        var childrenToMove = new JArray();
-
-                        foreach (var actor in actorsToConvert)
-                        {
-                            var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
-                            var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
-
-                            Console.WriteLine($"\nMoving children of: {actor["name"]} (ID: {actor["id"]})");
-
-                            var queryChildren = new JObject(
-                                new JProperty("waql", $"$ {actorPath} select children"));
-
-                            JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
-
-                            // Copy the children to the new folder
-                            if (resultChildren["return"] is JArray resultsArrayChildren && resultsArrayChildren.Any())
-                            {
-                                foreach (var child in resultChildren["return"])
-                                {
-                                    Console.WriteLine($"\nMoving: {child["name"]} (ID: {child["id"]})");
-
-                                    await client.Call(ak.wwise.core.@object.move, new JObject(
-                                        new JProperty("object", child["id"]),
-                                        new JProperty("parent", folderPath)));
-                                }
-                            }
-                            // Delete the actor
-                            Console.WriteLine($"\nDeleting: {actor["name"]} (ID: {actor["id"]}");
-
-                            await client.Call(ak.wwise.core.@object.delete, new JObject(
-                                 new JProperty("object", actor["id"])));
-                            
-                            // Rename the folder
-                            await client.Call(ak.wwise.core.@object.setName, new JObject(
-                                new JProperty("object", folderPath),
-                                new JProperty("value", actor["name"])));
-                        }
+                        await ConvertActorsToFoldersAsync(client, actorsToConvert);
                     }
                     else
                     {
-                        Console.Clear();
                         Console.WriteLine("User cancelled.");
                     }
                 }
@@ -199,6 +73,138 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             catch (Exception e)
             {
                 Console.Error.WriteLine(e.Message);
+            }
+        }
+
+        private static async Task<JsonClient> InitializeClientAsync()
+        {
+            JsonClient client = new JsonClient();
+            await client.Connect();
+            client.Disconnected += () => Console.WriteLine("We lost connection!");
+            return client;
+        }
+
+        private static async Task<JArray> GetActorMixersAsync(JsonClient client)
+        {
+            var query = new JObject(new JProperty("waql", "$ from type actormixer where parent.type:\"actormixer\""));
+            var options = new JObject(new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
+
+            JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
+
+            return result["return"] as JArray;
+        }
+
+        private static async Task<JArray> ProcessActorsAsync(JsonClient client, JArray actors)
+        {
+            var actorsToConvert = new JArray();
+
+            foreach (var actor in actors)
+            {
+                // Check for differences between the actor and its parent
+                Console.WriteLine($"Processing: {actor["name"]} (ID: {actor["id"]})");
+                
+                JObject diff = await client.Call(ak.wwise.core.@object.diff, new JObject(
+                                                    new JProperty("source", actor["id"]),
+                                                    new JProperty("target", actor["parent.id"])));
+
+                // Check for states differences
+                var stateQuery = new JObject(
+                    new JProperty("waql", $"$ \"{actor["id"]}\""));
+
+                var stateOptions = new JObject(
+                   new JProperty("return", new string[] { "stateGroups" }));
+
+                JObject stateResult = await client.Call(ak.wwise.core.@object.get, stateQuery, stateOptions);
+
+                var parentStateQuery = new JObject(
+                    new JProperty("waql", $"$ \"{actor["parent.id"]}\""));
+
+                var parentStateOptions = new JObject(
+                   new JProperty("return", new string[] { "stateGroups" }));
+
+                JObject parentStateResult = await client.Call(ak.wwise.core.@object.get, parentStateQuery, parentStateOptions);
+
+                // Check if the actor is referenced by an event action
+                var referenceQuery = new JObject(
+                    new JProperty("waql", $"$ \"{actor["id"]}\" select referencesTo where type:\"action\""));
+
+                var referenceOptions = new JObject(
+                    new JProperty("return", new string[] { "id" }));
+
+                JObject referenceResult = await client.Call(ak.wwise.core.@object.get, referenceQuery, referenceOptions);
+
+                // Create a list of actors to convert 
+                bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
+                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any();
+                bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
+                bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString();
+
+                if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && hasNoStateDifferences)
+                {
+                    actorsToConvert.Add(new JObject(
+                        new JProperty("id", actor["id"]),
+                        new JProperty("name", actor["name"]),
+                        new JProperty("path", actor["path"]),
+                        new JProperty("parent.id", actor["parent.id"]),
+                        new JProperty("parent.name", actor["parent.name"])));
+                }
+            }
+
+            return actorsToConvert;
+        }
+
+        private static async Task ConvertActorsToFoldersAsync(JsonClient client, JArray actorsToConvert)
+        {
+            // Create a folder for each actor
+            foreach (var actor in actorsToConvert)
+            {
+                var tempName = $"{actor["name"]}Temp";
+
+                Console.WriteLine($"\nConverting: {actor["name"]} (ID: {actor["id"]})");
+
+                await client.Call(ak.wwise.core.@object.create, new JObject(
+                    new JProperty("parent", actor["parent.id"]),
+                    new JProperty("type", "Folder"),
+                    new JProperty("name", tempName)));
+            }
+
+            // Get children of the actor
+            var childrenToMove = new JArray();
+
+            foreach (var actor in actorsToConvert)
+            {
+                var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
+                var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
+
+                Console.WriteLine($"\nMoving children of: {actor["name"]} (ID: {actor["id"]})");
+
+                var queryChildren = new JObject(
+                    new JProperty("waql", $"$ {actorPath} select children"));
+
+                JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
+
+                // Copy the children to the new folder
+                if (resultChildren["return"] is JArray resultsArrayChildren && resultsArrayChildren.Any())
+                {
+                    foreach (var child in resultChildren["return"])
+                    {
+                        Console.WriteLine($"\nMoving: {child["name"]} (ID: {child["id"]})");
+
+                        await client.Call(ak.wwise.core.@object.move, new JObject(
+                            new JProperty("object", child["id"]),
+                            new JProperty("parent", folderPath)));
+                    }
+                }
+                // Delete the actor
+                Console.WriteLine($"\nDeleting: {actor["name"]} (ID: {actor["id"]}");
+
+                await client.Call(ak.wwise.core.@object.delete, new JObject(
+                     new JProperty("object", actor["id"])));
+
+                // Rename the folder
+                await client.Call(ak.wwise.core.@object.setName, new JObject(
+                    new JProperty("object", folderPath),
+                    new JProperty("value", actor["name"])));
             }
         }
 
@@ -229,6 +235,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
             Environment.Exit(0);
         }
+
         private static void PrintNoCandidatesMessage()
         {
             Console.Clear();
