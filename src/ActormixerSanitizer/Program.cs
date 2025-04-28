@@ -102,7 +102,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         foreach (var actor in actorsToConvert)
                         {
                             var tempName = $"{actor["name"]}Temp";
-                            Console.WriteLine($"Converting: {actor}");
+                            Console.WriteLine($"\nConverting: {actor["name"]}");
                             await client.Call(ak.wwise.core.@object.create, new JObject(
                                 new JProperty("parent", actor["parent.id"]),
                                 new JProperty("type", "Folder"),
@@ -117,14 +117,12 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                             var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
                             var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
 
-                            Console.WriteLine($"Moving children of: {actor}");
+                            Console.WriteLine($"\nMoving children of: {actor["name"]}");
 
                             var queryChildren = new JObject(
                                 new JProperty("waql", $"$ {actorPath} select children"));
 
                             JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
-
-                            Console.WriteLine($"Child: {resultChildren}");
 
                             // Copy the children to the new folder
                             if (resultChildren["return"] is JArray resultsArrayChildren && resultsArrayChildren.Any())
@@ -139,7 +137,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                                 }
                             }
                             // Delete the actor
-                            Console.WriteLine($"Deleting: {actor}");
+                            Console.WriteLine($"\nDeleting: {actor["name"]} (ID: {actor["id"]}");
                             await client.Call(ak.wwise.core.@object.delete, new JObject(
                                  new JProperty("object", actor["id"])));
                             
@@ -192,13 +190,13 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
         private static void PrintExitMessage()
         {
-            Console.WriteLine("Done. Press any key to exit.");
+            Console.WriteLine("\nDone. Press any key to exit.");
             Console.ReadLine();
         }
         private static void PrintNoCandidatesMessage()
         {
             Console.Clear();
-            Console.WriteLine("No actor mixers to sanitize found. Good job!");
+            Console.WriteLine("No actor-mixers to sanitize found. Good job!");
         }
     }
 }

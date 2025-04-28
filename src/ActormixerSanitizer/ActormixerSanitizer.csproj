@@ -5,8 +5,8 @@
      </PropertyGroup>
      <ItemGroup>
      <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-     <ProjectReference Include="..\WaapiClientCore\WaapiClientCore.csproj" />
-     <ProjectReference Include="..\WaapiClientJson\WaapiClientJson.csproj" />
+     <ProjectReference Include="..\ClientCore\ClientCore.csproj" />
+     <ProjectReference Include="..\ClientJson\ClientJson.csproj" />
    </ItemGroup>
    </Project>
    
