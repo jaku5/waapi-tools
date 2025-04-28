@@ -1,7 +1,7 @@
 {
     "commands":[
         {
-            "id":"jpa.actormixer-sanitizer",
+            "id":"jpaudio.actormixer-sanitizer",
             "displayName":"Convert",
             "defaultShortcut":"",
             "program":"dotnet",
