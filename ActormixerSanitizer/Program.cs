@@ -90,31 +90,11 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         }
                     }
 
-                    // Display the actors to convert
-                    Console.Clear();
-
-                    if (!actorsToConvert.Any())
-                    {
-                        PrintNoCandidatesMessage();
-                        PrintExitMessage();
-
-                        return;
-                    }
-
-                    else
-                    {
-                        Console.WriteLine("The following actor-mixers can be converted to virtual folders:\n");
-                        foreach (var actor in actorsToConvert)
-                        {
-                            Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]})");
-                        }
-                    }
+                    DisplayActorsToConvert(actorsToConvert);
 
                     Console.WriteLine("\nWould you like to convert these actor-mixers to virtual folders? (y/n)");
 
-                    string userInput;
-
-                    userInput = Console.ReadLine();
+                    string userInput = Console.ReadLine();
 
                     if (userInput.ToLower() == "y")
                     {
@@ -185,6 +165,28 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             catch (Exception e)
             {
                 Console.Error.WriteLine(e.Message);
+            }
+        }
+
+        private static void DisplayActorsToConvert(JArray actorsToConvert)
+        {
+            Console.Clear();
+
+            if (!actorsToConvert.Any())
+            {
+                PrintNoCandidatesMessage();
+                PrintExitMessage();
+
+                return;
+            }
+
+            else
+            {
+                Console.WriteLine("The following actor-mixers can be converted to virtual folders:\n");
+                foreach (var actor in actorsToConvert)
+                {
+                    Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]})");
+                }
             }
         }
 
