@@ -30,9 +30,9 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using WaapiClientJson;
+using JPAudio.WaapiTools.ClientJson;
 
-namespace ActormixerSanitizer
+namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 {
     class Program
     {
@@ -72,7 +72,7 @@ namespace ActormixerSanitizer
 
                     foreach (var actor in result["return"])
                     {
-                        Console.WriteLine($"\nProcessing: {actor["name"]} (ID: {actor["id"]})");
+                        Console.WriteLine($"Processing: {actor["name"]} (ID: {actor["id"]})");
                         JObject diff = await client.Call(ak.wwise.core.@object.diff,
                                                         new JObject(
                                                             new JProperty("source", actor["id"]),
@@ -89,8 +89,28 @@ namespace ActormixerSanitizer
                                 new JProperty("parent.name", actor["parent.name"])));
                         }
                     }
-                    Console.WriteLine($"Actors to convert: {actorsToConvert}");
-                    Console.WriteLine("Would you like to convert these actors to virtual folders? (y/n)");
+
+                    // Display the actors to convert
+                    Console.Clear();
+
+                    if (!actorsToConvert.Any())
+                    {
+                        PrintNoCandidatesMessage();
+                        PrintExitMessage();
+
+                        return;
+                    }
+
+                    else
+                    {
+                        Console.WriteLine("The following actor-mixers can be converted to virtual folders:\n");
+                        foreach (var actor in actorsToConvert)
+                        {
+                            Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]})");
+                        }
+                    }
+
+                    Console.WriteLine("\nWould you like to convert these actor-mixers to virtual folders? (y/n)");
 
                     string userInput;
 
@@ -151,21 +171,32 @@ namespace ActormixerSanitizer
                     }
                     else
                     {
+                        Console.Clear();
                         Console.WriteLine("User cancelled.");
                     }
                 }
                 else
                 {
-                    Console.WriteLine("No actor mixers to sanitize found. Good job!");
+                    PrintNoCandidatesMessage();
                 }
 
-                Console.WriteLine("Done. Press any key to exit.");
-                Console.ReadLine();
+                PrintExitMessage();
             }
             catch (Exception e)
             {
                 Console.Error.WriteLine(e.Message);
             }
+        }
+
+        private static void PrintExitMessage()
+        {
+            Console.WriteLine("Done. Press any key to exit.");
+            Console.ReadLine();
+        }
+        private static void PrintNoCandidatesMessage()
+        {
+            Console.Clear();
+            Console.WriteLine("No actor mixers to sanitize found. Good job!");
         }
     }
 }

@@ -26,16 +26,16 @@ the specific language governing permissions and limitations under the License.
 
 *******************************************************************************/
 
-using WaapiClientCore;
+using JPAudio.WaapiTools.ClientCore;
 
-namespace WaapiClientJson
+namespace JPAudio.WaapiTools.ClientJson
 {
     /// <summary>
     /// The JsonClient provides an abstraction layer over the base Waapi Client and wraps everything under Newtonsoft.Json.Linq.JObject for convenience.
     /// </summary>
     public class JsonClient
     {
-        private Client client = new WaapiClientCore.Client();
+        private Client client = new JPAudio.WaapiTools.ClientCore.Client();
 
         public delegate void PublishHandler(Newtonsoft.Json.Linq.JObject json);
 

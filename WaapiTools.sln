@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaapiClientCore", "WaapiCli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaapiClientJson", "WaapiClientJson\WaapiClientJson.csproj", "{3835D2FF-0F43-47AF-95FE-1A547FC61892}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer", "WaapiClientSample\ActormixerSanitizer.csproj", "{9391D7CB-4791-42D9-B45F-6BCFAC2C4D71}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer", "ActormixerSanitizer\ActormixerSanitizer.csproj", "{9391D7CB-4791-42D9-B45F-6BCFAC2C4D71}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

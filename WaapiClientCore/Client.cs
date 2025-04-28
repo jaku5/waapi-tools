@@ -26,11 +26,11 @@ the specific language governing permissions and limitations under the License.
 
 *******************************************************************************/
 
-namespace WaapiClientCore
+namespace JPAudio.WaapiTools.ClientCore
 {
     /// <summary>
     /// The Waapi Client provide a core interface to Waapi using strings only. You will need to provide your own JSON serialization.
-    /// <seealso cref="AK.Wwise.Waapi.JsonClient"/>
+    /// <seealso cref="JPAudio.WaapiTools.ClientJson"/>
     /// </summary>
     public class Client
     {

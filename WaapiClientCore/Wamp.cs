@@ -28,7 +28,7 @@ the specific language governing permissions and limitations under the License.
 
 using System.Linq;
 
-namespace WaapiClientCore
+namespace JPAudio.WaapiTools.ClientCore
 {
     /// <summary>
     /// WAMP protocol implementation using only strings and regular expressions. This implements only a subset of the WAMP feature set and is only compatible with Wwise.
