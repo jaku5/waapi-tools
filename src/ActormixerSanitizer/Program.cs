@@ -79,20 +79,40 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                                                             new JProperty("target", actor["parent.id"])),
                                                         null);
 
-                        // Check if the actor is referenced by an event
-                        var referenceQuery = new JObject(
-                            new JProperty("waql", $"$ \"{actor["id"]}\" select referencesTo"));
 
-                        Console.WriteLine(referenceQuery);
+                        // Check for states differences
+                        var stateQuery = new JObject(
+                            new JProperty("waql", $"$ \"{actor["id"]}\""));
+
+                        var stateOptions = new JObject(
+                           new JProperty("return", new string[] { "stateGroups" }));
+
+                        JObject stateResult = await client.Call(ak.wwise.core.@object.get, stateQuery, stateOptions);
+
+                        var parentStateQuery = new JObject(
+                            new JProperty("waql", $"$ \"{actor["parent.id"]}\""));
+
+                        var parentStateOptions = new JObject(
+                           new JProperty("return", new string[] { "stateGroups" }));
+
+                        JObject parentStateResult = await client.Call(ak.wwise.core.@object.get, parentStateQuery, parentStateOptions);
+
+                        // Check if the actor is referenced by an event action
+                        var referenceQuery = new JObject(
+                            new JProperty("waql", $"$ \"{actor["id"]}\" select referencesTo where type:\"action\""));
 
                         var referenceOptions = new JObject(
                             new JProperty("return", new string[] { "id" }));
 
                         JObject referenceResult = await client.Call(ak.wwise.core.@object.get, referenceQuery, referenceOptions);
 
-                        Console.WriteLine(referenceResult);
+                        // Create a list of actors to convert 
+                        bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
+                        bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any();
+                        bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
+                        bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString();
 
-                        if (diff["properties"] is JArray diffArray && !diffArray.Any() && referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any())
+                        if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && hasNoStateDifferences)
                         {
                             actorsToConvert.Add(new JObject(
                                 new JProperty("id", actor["id"]),
@@ -115,7 +135,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         foreach (var actor in actorsToConvert)
                         {
                             var tempName = $"{actor["name"]}Temp";
+
                             Console.WriteLine($"\nConverting: {actor["name"]} (ID: {actor["id"]})");
+
                             await client.Call(ak.wwise.core.@object.create, new JObject(
                                 new JProperty("parent", actor["parent.id"]),
                                 new JProperty("type", "Folder"),
@@ -151,6 +173,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                             }
                             // Delete the actor
                             Console.WriteLine($"\nDeleting: {actor["name"]} (ID: {actor["id"]}");
+
                             await client.Call(ak.wwise.core.@object.delete, new JObject(
                                  new JProperty("object", actor["id"])));
                             
