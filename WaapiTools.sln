@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer", "src/ActormixerSanitizer\ActormixerSanitizer.csproj", "{9391D7CB-4791-42D9-B45F-6BCFAC2C4D71}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaapiClientCore", "src/WaapiClientCore\WaapiClientCore.csproj", "{DFC711AA-3E63-40D1-ADA6-937609A9C42D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaapiClientJson", "src/WaapiClientJson\WaapiClientJson.csproj", "{3835D2FF-0F43-47AF-95FE-1A547FC61892}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer", "src/ActormixerSanitizer\ActormixerSanitizer.csproj", "{9391D7CB-4791-42D9-B45F-6BCFAC2C4D71}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
