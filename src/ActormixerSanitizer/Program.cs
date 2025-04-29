@@ -87,7 +87,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         private static async Task<JArray> GetActorMixersAsync(JsonClient client)
         {
             var query = new JObject(new JProperty("waql", "$ from type actormixer where parent.type:\"actormixer\""));
-            var options = new JObject(new JProperty("return", new string[] { "name", "id", "path", "parent.name", "parent.id" }));
+            var options = new JObject(new JProperty("return", new string[] { "name", "id", "path", "stateProperties", "parent.name", "parent.id" }));
 
             JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
 
@@ -153,18 +153,20 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
                 // Create a list of actors to convert 
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
-                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any() || rtpcResult["return"] is JArray rtpcResultArray && !rtpcResultArray.Any();
+                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any(item => item.ToString().Contains("RTPC")) || rtpcResult["return"] is JArray rtpcResultArray && !rtpcResultArray.Any();
                 bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
-                bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString() || statePresenceResult["return"] is JArray statePresenceResultArray && !statePresenceResultArray.Any(); ;
+                bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString();
+                bool hasNoState = statePresenceResult["return"] is JArray statePresenceResultArray && !statePresenceResultArray.Any();
 
-                if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && hasNoStateDifferences)
+                if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && (hasNoStateDifferences || hasNoState))
                 {
                     actorsToConvert.Add(new JObject(
                         new JProperty("id", actor["id"]),
                         new JProperty("name", actor["name"]),
                         new JProperty("path", actor["path"]),
                         new JProperty("parent.id", actor["parent.id"]),
-                        new JProperty("parent.name", actor["parent.name"])));
+                        new JProperty("parent.name", actor["parent.name"]),
+                        new JProperty("hasNoState", hasNoState)));
                 }
             }
 
@@ -241,7 +243,11 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 Console.WriteLine("The following actor-mixers can be converted to virtual folders:\n");
                 foreach (var actor in actorsToConvert)
                 {
-                    Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]})");
+                    string note = actor["hasNoState"]?.ToObject<bool>() == false
+                        ? " (Note: This actor has state group.)"
+                        : string.Empty;
+
+                    Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]}){note}");
                 }
             }
         }
