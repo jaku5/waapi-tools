@@ -133,11 +133,29 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
                 JObject referenceResult = await client.Call(ak.wwise.core.@object.get, referenceQuery, referenceOptions);
 
+                // Additional check on actor for rtpc presence
+                var rtpcQuery = new JObject(
+                    new JProperty("waql", $"$ \"{actor["id"]}\" where rtpc.any()"));
+
+                var rtpcOptions = new JObject(
+                    new JProperty("return", new string[] { "id" }));
+
+                JObject rtpcResult = await client.Call(ak.wwise.core.@object.get, rtpcQuery);
+
+                // Additional check on actor for state presence
+                var statePresenceQuery = new JObject(
+                    new JProperty("waql", $"$ \"{actor["id"]}\" where stateGroups.any()"));
+
+                var statePresenceOptions = new JObject(
+                    new JProperty("return", new string[] { "id" }));
+
+                JObject statePresenceResult = await client.Call(ak.wwise.core.@object.get, statePresenceQuery);
+
                 // Create a list of actors to convert 
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
-                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any();
+                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any() || rtpcResult["return"] is JArray rtpcResultArray && !rtpcResultArray.Any();
                 bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
-                bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString();
+                bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString() || statePresenceResult["return"] is JArray statePresenceResultArray && !statePresenceResultArray.Any(); ;
 
                 if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && hasNoStateDifferences)
                 {
