@@ -2,14 +2,14 @@
     "commands":[
         {
             "id":"jpaudio.actormixer-sanitizer",
-            "displayName":"Convert",
+            "displayName":"Run Actormixer Sanitizer",
             "defaultShortcut":"",
             "program":"dotnet",
             "startMode":"SingleSelectionSingleProcess",
-            "args":"run --project ${CurrentCommandDirectory}\\..\\WaapiClientSample\\WaapiClientSample.csproj",
+            "args":"run ${CurrentCommandDirectory}\\..\\ActormixerSanitizer.dll",
             "cwd":"",
             "contextMenu":{
-                    "basePath":"WAAPI Tools"
+                    "basePath":""
                 },          
             "mainMenu":{
                     "basePath":"Extra"

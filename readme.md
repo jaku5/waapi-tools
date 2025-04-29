@@ -14,22 +14,20 @@ Currently, the project includes the following tool:
 ## Installation
 
 1. **Download the Release**:
-   - Navigate to the [Releases](https://github.com/your-username/your-repository/releases) section of this repository.
+   - Navigate to the [Releases](https://github.com/jaku5/waapi-tools/releases) section of this repository.
    - Download the latest release, which includes:
-     - `JPAudioWaapiTools.dll`
-     - A `Commands` folder containing `JPAudioWaapiTools.json`.
+     - `ActormixerSanitizer.exe`
+     - `jpaudio-waapi-tools.json`.
 
 2. **Copy files to Wwise installation folder**:
    - Locate your Wwise installation directory.
-   - Copy the downloaded `JPAudioWaapiTools.dll` and the `Commands` folder into the following subfolder of your Wwise installation.
-	   - **Windows**: `%WWISEROOT%\Authoring\Data\Add-ons\`
-	   - **macOS**: `/Library/Application Support/Audiokinetic/Wwise<version>/Authoring/Data/Add-ons`
+   - Copy the downloaded `ActormixerSanitizer.exe` into `%WWISEROOT%\Authoring\Data\Add-ons` and the `jpaudio-waapi-tools.json` into `%WWISEROOT%\Authoring\Data\Add-ons\Commands` subfolder of your Wwise installation.
    - For more information and other installation methods, refer to [Audiokinetic documentation](https://www.audiokinetic.com/en/public-library/2022.1.18_8567/?source=SDK&id=defining_custom_commands.html).
 
 ## Usage
 
 1. Open Wwise.
-2. Access the **WAAPI Tools** menu from the context menu or the **Extra** menu in Wwise.
+2. Access the **Extra** menu in Wwise.
 3. Select the command to run the tool.
 
 ### Actormixer Sanitizer
