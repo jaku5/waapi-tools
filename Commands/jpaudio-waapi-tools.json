@@ -4,9 +4,9 @@
             "id":"jpaudio.actormixer-sanitizer",
             "displayName":"Run Actormixer Sanitizer",
             "defaultShortcut":"",
-            "program":"dotnet",
+            "program":"${CurrentCommandDirectory}\\..\\ActormixerSanitizer.exe",
             "startMode":"SingleSelectionSingleProcess",
-            "args":"run ${CurrentCommandDirectory}\\..\\ActormixerSanitizer.dll",
+            "args":"",
             "cwd":"",
             "contextMenu":{
                     "basePath":""
