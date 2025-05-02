@@ -179,8 +179,10 @@ public class ak
 				public const string delete = "ak.wwise.core.object.delete";
 				/// <summary>Retrieves the list of property and reference names for an object.</summary>
 				public const string getPropertyAndReferenceNames = "ak.wwise.core.object.getPropertyAndReferenceNames";
-			}
-			public class undo
+                /// <summary>Compares properties and lists of the source object with those in the target object.</summary>
+                public const string diff = "ak.wwise.core.object.diff";
+            }
+            public class undo
 			{
 				/// <summary>Ends the last undo group.</summary>
 				public const string endGroup = "ak.wwise.core.undo.endGroup";

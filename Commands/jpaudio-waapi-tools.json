@@ -1,0 +1,19 @@
+{
+    "commands":[
+        {
+            "id":"jpaudio.actormixer-sanitizer",
+            "displayName":"Run Actormixer Sanitizer",
+            "defaultShortcut":"",
+            "program":"${CurrentCommandDirectory}\\..\\ActormixerSanitizer.exe",
+            "startMode":"SingleSelectionSingleProcess",
+            "args":"",
+            "cwd":"",
+            "contextMenu":{
+                    "basePath":""
+                },          
+            "mainMenu":{
+                    "basePath":"Extra"
+                }
+        }      
+    ]
+}

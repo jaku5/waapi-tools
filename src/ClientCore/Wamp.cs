@@ -28,7 +28,7 @@ the specific language governing permissions and limitations under the License.
 
 using System.Linq;
 
-namespace AK.Wwise.Waapi
+namespace JPAudio.WaapiTools.ClientCore
 {
     /// <summary>
     /// WAMP protocol implementation using only strings and regular expressions. This implements only a subset of the WAMP feature set and is only compatible with Wwise.
@@ -177,7 +177,7 @@ namespace AK.Wwise.Waapi
             return new Response()
             {
                 MessageId = Messages.RESULT,
-                RequestId = (int.Parse(match.Groups[1].Value)),
+                RequestId = int.Parse(match.Groups[1].Value),
                 Json = msg.Substring(match.Groups[2].Index, msg.Length - match.Groups[2].Index - 1)
             };
         }
@@ -193,8 +193,8 @@ namespace AK.Wwise.Waapi
             return new Response()
             {
                 MessageId = Messages.SUBSCRIBED,
-                RequestId = (int.Parse(match.Groups[1].Value)),
-                ContextSpecificResultId = (int.Parse(match.Groups[2].Value))
+                RequestId = int.Parse(match.Groups[1].Value),
+                ContextSpecificResultId = int.Parse(match.Groups[2].Value)
             };
         }
 
@@ -209,7 +209,7 @@ namespace AK.Wwise.Waapi
             return new Response()
             {
                 MessageId = Messages.UNSUBSCRIBED,
-                RequestId = (int.Parse(match.Groups[1].Value))
+                RequestId = int.Parse(match.Groups[1].Value)
             };
         }
 
@@ -239,7 +239,7 @@ namespace AK.Wwise.Waapi
             {
                 MessageId = Messages.WELCOME,
                 RequestId = 0,
-                ContextSpecificResultId = (int.Parse(match.Groups[1].Value))
+                ContextSpecificResultId = int.Parse(match.Groups[1].Value)
             };
         }
 
@@ -254,8 +254,8 @@ namespace AK.Wwise.Waapi
             return new Response()
             {
                 MessageId = Messages.EVENT,
-                RequestId = (int.Parse(match.Groups[2].Value)),
-                ContextSpecificResultId = (int.Parse(match.Groups[1].Value)),
+                RequestId = int.Parse(match.Groups[2].Value),
+                ContextSpecificResultId = int.Parse(match.Groups[1].Value),
                 Json = msg.Substring(match.Groups[3].Index, msg.Length - match.Groups[3].Index - 1)
             };
         }
@@ -288,7 +288,7 @@ namespace AK.Wwise.Waapi
 
             try
             {
-                byte[] bytes = segments.SelectMany(t => t).ToArray<byte>();
+                byte[] bytes = segments.SelectMany(t => t).ToArray();
                 string msg = System.Text.Encoding.UTF8.GetString(bytes);
                 return Parse(msg);
             }
@@ -391,7 +391,7 @@ namespace AK.Wwise.Waapi
             }
             catch (System.Exception e)
             {
-                throw new Waapi.Wamp.ErrorException(e.ToString());
+                throw new ErrorException(e.ToString());
             }
         }
 
