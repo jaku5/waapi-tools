@@ -36,6 +36,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 {
     class Program
     {
+        private const string WaqlKey = "waql";
+        private const string ReturnKey = "return";
+        private const string ObjectGetUri = ak.wwise.core.@object.get;
         static void Main(string[] args)
         {
             _Main().Wait();
@@ -89,12 +92,12 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
         private static async Task<JArray> GetActorMixersAsync(JsonClient client)
         {
-            var query = new JObject(new JProperty("waql", "$ from type actormixer where ancestors.any(type = \"actormixer\")"));
-            var options = new JObject(new JProperty("return", new string[] { "name", "id", "path", "parent.id" }));
+            var query = new JObject(new JProperty(WaqlKey, "$ from type actormixer where ancestors.any(type = \"actormixer\")"));
+            var options = new JObject(new JProperty(ReturnKey, new string[] { "name", "id", "path", "parent.id" }));
 
-            JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
+            JObject result = await client.Call(ObjectGetUri, query, options);
 
-            return result["return"] as JArray;
+            return result[ReturnKey] as JArray;
         }
 
         private static async Task<JArray> ProcessActorsAsync(JsonClient client, JArray actors)
@@ -105,14 +108,14 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             {
                 // Get actor's first actor-mixer type ancestor
                 var ancestorsQuery = new JObject(
-                    new JProperty("waql", $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")"));
+                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")"));
 
                 var ancestorsOptions = new JObject(
-                    new JProperty("return", new string[] { "id", "name" }));
+                    new JProperty(ReturnKey, new string[] { "id", "name" }));
 
-                JObject ancestorsResult = await client.Call(ak.wwise.core.@object.get, ancestorsQuery, ancestorsOptions);
+                JObject ancestorsResult = await client.Call(ObjectGetUri, ancestorsQuery, ancestorsOptions);
 
-                var ancestorsArray = ancestorsResult["return"] as JArray;
+                var ancestorsArray = ancestorsResult[ReturnKey] as JArray;
 
                 var ancestor = ancestorsArray[0];
 
@@ -125,54 +128,54 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
                 // Check for states differences
                 var stateQuery = new JObject(
-                    new JProperty("waql", $"$ \"{actor["id"]}\""));
+                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\""));
 
                 var stateOptions = new JObject(
-                   new JProperty("return", new string[] { "stateGroups" }));
+                   new JProperty(ReturnKey, new string[] { "stateGroups" }));
 
-                JObject stateResult = await client.Call(ak.wwise.core.@object.get, stateQuery, stateOptions);
+                JObject stateResult = await client.Call(ObjectGetUri, stateQuery, stateOptions);
 
                 var ancestorStateQuery = new JObject(
-                    new JProperty("waql", $"$ \"{ancestor["id"]}\""));
+                    new JProperty(WaqlKey, $"$ \"{ancestor["id"]}\""));
 
                 var ancestorStateOptions = new JObject(
-                   new JProperty("return", new string[] { "stateGroups" }));
+                   new JProperty(ReturnKey, new string[] { "stateGroups" }));
 
-                JObject ancestorStateResult = await client.Call(ak.wwise.core.@object.get, ancestorStateQuery, ancestorStateOptions);
+                JObject ancestorStateResult = await client.Call(ObjectGetUri, ancestorStateQuery, ancestorStateOptions);
 
                 // Check if the actor is referenced by an event action
                 var referenceQuery = new JObject(
-                    new JProperty("waql", $"$ \"{actor["id"]}\" select referencesTo where type:\"action\""));
+                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\""));
 
                 var referenceOptions = new JObject(
-                    new JProperty("return", new string[] { "id" }));
+                    new JProperty(ReturnKey, new string[] { "id" }));
 
-                JObject referenceResult = await client.Call(ak.wwise.core.@object.get, referenceQuery, referenceOptions);
+                JObject referenceResult = await client.Call(ObjectGetUri, referenceQuery, referenceOptions);
 
                 // Additional check on actor for rtpc presence
                 var rtpcQuery = new JObject(
-                    new JProperty("waql", $"$ \"{actor["id"]}\" where rtpc.any()"));
+                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" where rtpc.any()"));
 
                 var rtpcOptions = new JObject(
-                    new JProperty("return", new string[] { "id" }));
+                    new JProperty(ReturnKey, new string[] { "id" }));
 
-                JObject rtpcResult = await client.Call(ak.wwise.core.@object.get, rtpcQuery);
+                JObject rtpcResult = await client.Call(ObjectGetUri, rtpcQuery);
 
                 // Additional check on actor for state presence
                 var statePresenceQuery = new JObject(
-                    new JProperty("waql", $"$ \"{actor["id"]}\" where stateGroups.any()"));
+                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" where stateGroups.any()"));
 
                 var statePresenceOptions = new JObject(
-                    new JProperty("return", new string[] { "id" }));
+                    new JProperty(ReturnKey, new string[] { "id" }));
 
-                JObject statePresenceResult = await client.Call(ak.wwise.core.@object.get, statePresenceQuery);
+                JObject statePresenceResult = await client.Call(ObjectGetUri, statePresenceQuery);
 
                 // Create a list of actors to convert 
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
-                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any(item => item.ToString().Contains("RTPC")) || rtpcResult["return"] is JArray rtpcResultArray && !rtpcResultArray.Any();
-                bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
-                bool hasNoStateDifferences = stateResult["return"].ToString() == ancestorStateResult["return"].ToString();
-                bool hasNoState = statePresenceResult["return"] is JArray statePresenceResultArray && !statePresenceResultArray.Any();
+                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any(item => item.ToString().Contains("RTPC")) || rtpcResult[ReturnKey] is JArray rtpcResultArray && !rtpcResultArray.Any();
+                bool hasNoReferences = referenceResult[ReturnKey] is JArray referenceResultArray && !referenceResultArray.Any();
+                bool hasNoStateDifferences = stateResult[ReturnKey].ToString() == ancestorStateResult[ReturnKey].ToString();
+                bool hasNoState = statePresenceResult[ReturnKey] is JArray statePresenceResultArray && !statePresenceResultArray.Any();
 
                 if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && (hasNoStateDifferences || hasNoState))
                 {
@@ -216,14 +219,14 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 Console.WriteLine($"\nMoving children of: {actor["name"]} (ID: {actor["id"]})");
 
                 var queryChildren = new JObject(
-                    new JProperty("waql", $"$ {actorPath} select children"));
+                    new JProperty(WaqlKey, $"$ {actorPath} select children"));
 
-                JObject resultChildren = await client.Call(ak.wwise.core.@object.get, queryChildren);
+                JObject resultChildren = await client.Call(ObjectGetUri, queryChildren);
 
                 // Copy the children to the new folder
-                if (resultChildren["return"] is JArray resultsArrayChildren && resultsArrayChildren.Any())
+                if (resultChildren[ReturnKey] is JArray resultsArrayChildren && resultsArrayChildren.Any())
                 {
-                    foreach (var child in resultChildren["return"])
+                    foreach (var child in resultChildren[ReturnKey])
                     {
                         Console.WriteLine($"\nMoving: {child["name"]} (ID: {child["id"]})");
 
