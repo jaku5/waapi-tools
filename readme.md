@@ -45,7 +45,6 @@ The tool will:
 - Perform the conversion if confirmed or exit otherwise.
 #### Known Issues and Limitations 
 - I haven't found a way to compare state property values so it is possible the tool will identify an Actor-Mixer as a candidate for conversion even though it has different state properties values than their parent. To mitigate this, the tool will print the note if a candidate Actor-Mixer has any state group so the user can inspect it manually.
-- The tool will omit any actor-mixer that does not have actor-mixer as a direct parent (e.g., is under Work Unit or Virtual Folder). This functionality should be improved and hopefully will be addressed in a future release.
 > [!NOTE]
 > Please note that this tool is considered experimental; be careful when using it in production and preferably have source control setup to inspect the diffs or restore a backups. Especially since it is meant to be used at the and of production, after mixing stage, when you know you won't need these Actor-Mixers for mixing tasks. That said you should be able to undo all the changes made by the tool with <kbd>ctrl</kbd> + <kbd>z</kbd>.
 
