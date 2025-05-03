@@ -39,9 +39,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
         private const string ObjectGetUri = ak.wwise.core.@object.get;
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            _Main().Wait();
+            await _Main();
         }
 
         static async Task _Main()
@@ -92,10 +92,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
         private static async Task<JArray> GetActorMixersAsync(JsonClient client)
         {
-            var query = new JObject(new JProperty(WaqlKey, "$ from type actormixer where ancestors.any(type = \"actormixer\")"));
-            var options = new JObject(new JProperty(ReturnKey, new string[] { "name", "id", "path", "parent.id" }));
-
-            JObject result = await client.Call(ObjectGetUri, query, options);
+            JObject result = await QueryWaapiAsync(client, "$ from type actormixer where ancestors.any(type = \"actormixer\")", new[] { "name", "id", "path", "parent.id" });
 
             return result[ReturnKey] as JArray;
         }
@@ -107,13 +104,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             foreach (var actor in actors)
             {
                 // Get actor's first actor-mixer type ancestor
-                var ancestorsQuery = new JObject(
-                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")"));
 
-                var ancestorsOptions = new JObject(
-                    new JProperty(ReturnKey, new string[] { "id", "name" }));
-
-                JObject ancestorsResult = await client.Call(ObjectGetUri, ancestorsQuery, ancestorsOptions);
+                JObject ancestorsResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")", new string[] { "id", "name" });
 
                 var ancestorsArray = ancestorsResult[ReturnKey] as JArray;
 
@@ -127,48 +119,18 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                                                     new JProperty("target", ancestor["id"])));
 
                 // Check for states differences
-                var stateQuery = new JObject(
-                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\""));
+                JObject stateResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\"", new string[] { "stateGroups" });
 
-                var stateOptions = new JObject(
-                   new JProperty(ReturnKey, new string[] { "stateGroups" }));
-
-                JObject stateResult = await client.Call(ObjectGetUri, stateQuery, stateOptions);
-
-                var ancestorStateQuery = new JObject(
-                    new JProperty(WaqlKey, $"$ \"{ancestor["id"]}\""));
-
-                var ancestorStateOptions = new JObject(
-                   new JProperty(ReturnKey, new string[] { "stateGroups" }));
-
-                JObject ancestorStateResult = await client.Call(ObjectGetUri, ancestorStateQuery, ancestorStateOptions);
+                JObject ancestorStateResult = await QueryWaapiAsync(client, $"$ \"{ancestor["id"]}\"", new string[] { "stateGroups" });
 
                 // Check if the actor is referenced by an event action
-                var referenceQuery = new JObject(
-                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\""));
-
-                var referenceOptions = new JObject(
-                    new JProperty(ReturnKey, new string[] { "id" }));
-
-                JObject referenceResult = await client.Call(ObjectGetUri, referenceQuery, referenceOptions);
+                JObject referenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\"", new string[] { "id" });
 
                 // Additional check on actor for rtpc presence
-                var rtpcQuery = new JObject(
-                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" where rtpc.any()"));
-
-                var rtpcOptions = new JObject(
-                    new JProperty(ReturnKey, new string[] { "id" }));
-
-                JObject rtpcResult = await client.Call(ObjectGetUri, rtpcQuery);
+                JObject rtpcResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where rtpc.any()", new string[] { "id" });
 
                 // Additional check on actor for state presence
-                var statePresenceQuery = new JObject(
-                    new JProperty(WaqlKey, $"$ \"{actor["id"]}\" where stateGroups.any()"));
-
-                var statePresenceOptions = new JObject(
-                    new JProperty(ReturnKey, new string[] { "id" }));
-
-                JObject statePresenceResult = await client.Call(ObjectGetUri, statePresenceQuery);
+                JObject statePresenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where stateGroups.any()", new string[] { "id" });
 
                 // Create a list of actors to convert 
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
@@ -284,6 +246,13 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         {
             Console.Clear();
             Console.WriteLine("No actor-mixers to sanitize found. Good job!");
+        }
+        private static async Task<JObject> QueryWaapiAsync(JsonClient client, string waql, string[] returnFields)
+        {
+            var query = new JObject(new JProperty(WaqlKey, waql));
+            var options = new JObject(new JProperty(ReturnKey, returnFields));
+
+            return await client.Call(ObjectGetUri, query, options);
         }
     }
 }
