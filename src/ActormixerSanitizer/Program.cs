@@ -56,7 +56,10 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                     Console.WriteLine("\nWould you like to convert these actor-mixers to virtual folders? (y/n)");
                     if (Console.ReadLine()?.ToLower() == "y")
                     {
+                        await client.Call(ak.wwise.core.undo.beginGroup);
                         await ConvertActorsToFoldersAsync(client, actorsToConvert);
+                        await client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                                            new JProperty("displayName", "Sanitize Actor-Mixers")));
                     }
                     else
                     {
