@@ -4,7 +4,7 @@
        <TargetFramework>net9.0</TargetFramework>
      </PropertyGroup>
      <ItemGroup>
-     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
      <ProjectReference Include="..\ClientCore\ClientCore.csproj" />
      <ProjectReference Include="..\ClientJson\ClientJson.csproj" />
    </ItemGroup>
