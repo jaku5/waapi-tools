@@ -86,8 +86,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
         private static async Task<JArray> GetActorMixersAsync(JsonClient client)
         {
-            var query = new JObject(new JProperty("waql", "$ from type actormixer where parent.type:\"actormixer\""));
-            var options = new JObject(new JProperty("return", new string[] { "name", "id", "path", "stateProperties", "parent.name", "parent.id" }));
+            var query = new JObject(new JProperty("waql", "$ from type actormixer where ancestors.any(type = \"actormixer\")"));
+            var options = new JObject(new JProperty("return", new string[] { "name", "id", "path", "parent.id" }));
 
             JObject result = await client.Call(ak.wwise.core.@object.get, query, options);
 
@@ -100,12 +100,25 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
             foreach (var actor in actors)
             {
-                // Check for differences between the actor and its parent
+                // Get actor's first actor-mixer type ancestor
+                var ancestorsQuery = new JObject(
+                    new JProperty("waql", $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")"));
+
+                var ancestorsOptions = new JObject(
+                    new JProperty("return", new string[] { "id", "name" }));
+
+                JObject ancestorsResult = await client.Call(ak.wwise.core.@object.get, ancestorsQuery, ancestorsOptions);
+
+                var ancestorsArray = ancestorsResult["return"] as JArray;
+
+                var ancestor = ancestorsArray[0];
+
+                // Check for differences between the actor and its ancestor
                 Console.WriteLine($"Processing: {actor["name"]} (ID: {actor["id"]})");
-                
+
                 JObject diff = await client.Call(ak.wwise.core.@object.diff, new JObject(
                                                     new JProperty("source", actor["id"]),
-                                                    new JProperty("target", actor["parent.id"])));
+                                                    new JProperty("target", ancestor["id"])));
 
                 // Check for states differences
                 var stateQuery = new JObject(
@@ -116,13 +129,13 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
                 JObject stateResult = await client.Call(ak.wwise.core.@object.get, stateQuery, stateOptions);
 
-                var parentStateQuery = new JObject(
-                    new JProperty("waql", $"$ \"{actor["parent.id"]}\""));
+                var ancestorStateQuery = new JObject(
+                    new JProperty("waql", $"$ \"{ancestor["id"]}\""));
 
-                var parentStateOptions = new JObject(
+                var ancestorStateOptions = new JObject(
                    new JProperty("return", new string[] { "stateGroups" }));
 
-                JObject parentStateResult = await client.Call(ak.wwise.core.@object.get, parentStateQuery, parentStateOptions);
+                JObject ancestorStateResult = await client.Call(ak.wwise.core.@object.get, ancestorStateQuery, ancestorStateOptions);
 
                 // Check if the actor is referenced by an event action
                 var referenceQuery = new JObject(
@@ -155,7 +168,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
                 bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any(item => item.ToString().Contains("RTPC")) || rtpcResult["return"] is JArray rtpcResultArray && !rtpcResultArray.Any();
                 bool hasNoReferences = referenceResult["return"] is JArray referenceResultArray && !referenceResultArray.Any();
-                bool hasNoStateDifferences = stateResult["return"].ToString() == parentStateResult["return"].ToString();
+                bool hasNoStateDifferences = stateResult["return"].ToString() == ancestorStateResult["return"].ToString();
                 bool hasNoState = statePresenceResult["return"] is JArray statePresenceResultArray && !statePresenceResultArray.Any();
 
                 if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && (hasNoStateDifferences || hasNoState))
@@ -164,8 +177,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         new JProperty("id", actor["id"]),
                         new JProperty("name", actor["name"]),
                         new JProperty("path", actor["path"]),
+                        new JProperty("ancestor.id", ancestor["id"]),
+                        new JProperty("ancestor.name", ancestor["name"]),
                         new JProperty("parent.id", actor["parent.id"]),
-                        new JProperty("parent.name", actor["parent.name"]),
                         new JProperty("hasNoState", hasNoState)));
                 }
             }
