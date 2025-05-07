@@ -7,10 +7,7 @@
             "program":"${CurrentCommandDirectory}\\..\\ActormixerSanitizer.exe",
             "startMode":"SingleSelectionSingleProcess",
             "args":"",
-            "cwd":"",
-            "contextMenu":{
-                    "basePath":""
-                },          
+            "cwd":"",         
             "mainMenu":{
                     "basePath":"Extra"
                 }
