@@ -50,10 +50,19 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             {
                 JsonClient client = await InitializeClientAsync();
                 JArray actors = await GetActorMixersAsync(client);
-
+                
                 if (actors != null && actors.Any())
                 {
                     JArray actorsToConvert = await ProcessActorsAsync(client, actors);
+
+                    if (actorsToConvert.Any())
+                    {
+                       await client.Call(ak.wwise.core.undo.beginGroup);
+                       await RemoveActorsWithActiveStates(client, actorsToConvert);
+                       await client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                                           new JProperty("displayName", "Create And Remove Temporary Query")));
+                    }
+
                     DisplayActorsToConvert(actorsToConvert);
 
                     Console.WriteLine("\nWould you like to convert these actor-mixers to virtual folders? (y/n)");
@@ -104,7 +113,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             foreach (var actor in actors)
             {
                 // Get actor's first actor-mixer type ancestor
-
+                // TODO: Check if can be simplified
                 JObject ancestorsResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")", new string[] { "id", "name" });
 
                 var ancestorsArray = ancestorsResult[ReturnKey] as JArray;
@@ -117,29 +126,19 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 JObject diff = await client.Call(ak.wwise.core.@object.diff, new JObject(
                                                     new JProperty("source", actor["id"]),
                                                     new JProperty("target", ancestor["id"])));
-
-                // Check for states differences
-                JObject stateResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\"", new string[] { "stateGroups" });
-
-                JObject ancestorStateResult = await QueryWaapiAsync(client, $"$ \"{ancestor["id"]}\"", new string[] { "stateGroups" });
-
+                
                 // Check if the actor is referenced by an event action
                 JObject referenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\"", new string[] { "id" });
 
                 // Additional check on actor for rtpc presence
                 JObject rtpcResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where rtpc.any()", new string[] { "id" });
 
-                // Additional check on actor for state presence
-                JObject statePresenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where stateGroups.any()", new string[] { "id" });
-
                 // Create a list of actors to convert 
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
                 bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any(item => item.ToString().Contains("RTPC")) || rtpcResult[ReturnKey] is JArray rtpcResultArray && !rtpcResultArray.Any();
                 bool hasNoReferences = referenceResult[ReturnKey] is JArray referenceResultArray && !referenceResultArray.Any();
-                bool hasNoStateDifferences = stateResult[ReturnKey].ToString() == ancestorStateResult[ReturnKey].ToString();
-                bool hasNoState = statePresenceResult[ReturnKey] is JArray statePresenceResultArray && !statePresenceResultArray.Any();
 
-                if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences && (hasNoStateDifferences || hasNoState))
+                if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences)
                 {
                     actorsToConvert.Add(new JObject(
                         new JProperty("id", actor["id"]),
@@ -147,8 +146,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         new JProperty("path", actor["path"]),
                         new JProperty("ancestor.id", ancestor["id"]),
                         new JProperty("ancestor.name", ancestor["name"]),
-                        new JProperty("parent.id", actor["parent.id"]),
-                        new JProperty("hasNoState", hasNoState)));
+                        new JProperty("parent.id", actor["parent.id"])));
                 }
             }
 
@@ -225,12 +223,63 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 Console.WriteLine("The following actor-mixers can be converted to virtual folders:\n");
                 foreach (var actor in actorsToConvert)
                 {
-                    string note = actor["hasNoState"]?.ToObject<bool>() == false
-                        ? " (Note: This actor has state group.)"
-                        : string.Empty;
-
-                    Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]}){note}");
+                    Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]})");
                 }
+            }
+        }
+
+        private static async Task RemoveActorsWithActiveStates(JsonClient client, JArray actorsToConvert)
+        {
+            // Check if any state is present in the actor-mixers and create a temporary query if so
+            JObject stateReference = await QueryWaapiAsync(client, "$ from type stateGroup where referencesTo.any(type = \"actormixer\" and ancestors.any(type = \"actormixer\")) select children where name != \"None\"", ["id"]);
+
+            if (stateReference[ReturnKey].Any())
+            {
+                JObject stateQuery = await CreateTemporaryQuery(client);
+                await CreateTemporarySearchCriteria(client, stateReference, stateQuery["id"].ToString());
+
+                // Remove any actor-mixers with active states from the list of actors to convert
+                JObject activeStates = await QueryWaapiAsync(client, $"$ from query \"{stateQuery["id"]}\"", ["id"]);
+                foreach (JToken actor in activeStates[ReturnKey])
+                {
+                    var actorToRemove = actorsToConvert
+                        .FirstOrDefault(a => a["id"]?.ToString() == actor["id"]?.ToString());
+
+                    if (actorToRemove != null)
+                    {
+                        actorsToConvert.Remove(actorToRemove);
+                    }
+                }
+
+                // Delete the temporary query
+                await client.Call(ak.wwise.core.@object.delete, new JObject(
+                                    new JProperty("object", stateQuery["id"].ToString())));
+            }
+        }
+
+        private static async Task<JObject> CreateTemporaryQuery(JsonClient client, string actorsToQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")")
+        {
+            return await client.Call(ak.wwise.core.@object.create, new JObject(
+                new JProperty("parent", "\\Queries\\Default Work Unit"),
+                new JProperty("type", "Query"),
+                new JProperty("name", "TemporaryStateQuery"),
+                new JProperty("@LogicalOperator", "1"),
+                new JProperty("@ObjectType", "10"),
+                new JProperty("@WAQL", actorsToQuery)));
+        }
+
+        private static async Task CreateTemporarySearchCriteria(JsonClient client, JObject stateReference, string parentQueryId)
+        {
+            foreach (JToken result in stateReference[ReturnKey])
+            {
+                var stateId = result["id"];
+
+                await client.Call(ak.wwise.core.@object.create, new JObject(
+                new JProperty("parent", parentQueryId),
+                new JProperty("type", "SearchCriteria"),
+                new JProperty("name", "{E2BA49FE-AADD-4726-A72E-9958C70A9F19}"),
+                new JProperty("@State", stateId),
+                new JProperty("@StatePropertyUsage", "2")));
             }
         }
 

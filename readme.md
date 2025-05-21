@@ -5,6 +5,7 @@ Waapi Tools is a collection of utilities designed to streamline tasks in Audioki
 Currently, the project includes the following tool:
 
 - **[ActormixerSanitizer](https://github.com/jaku5/waapi-tools#actormixer-sanitizer)**: A utility that converts Actor-Mixers into Virtual Folders when they share all properties with their parent Actor-Mixer.
+- More tools coming soon™.
 
 ## Prerequisites
 
@@ -39,12 +40,10 @@ The tool will:
 - Identify actor-mixers that can be converted into virtual folders based on the following criteria (all conditions must be met):
 	- Actor-Mixer and its parent share all properties values
 	- Actor-Mixer and its parent share all RTPCs lists and curves (or actor-mixer has no RTPCs)
-	- Actor-Mixer and its parent share states (or actor-mixer has no state groups)
+	- Actor-Mixer has no states with defined values (or actor-mixer has no states)
 	- Actor-Mixer is not referenced by any event action
 - List all actor-mixer candidates' names and IDs and prompt you to confirm the conversion.
 - Perform the conversion if confirmed or exit otherwise.
-#### Known Issues and Limitations 
-- I haven't found a way to compare state property values so it is possible the tool will identify an Actor-Mixer as a candidate for conversion even though it has different state properties values than their parent. To mitigate this, the tool will print the note if a candidate Actor-Mixer has any state group so the user can inspect it manually.
 > [!NOTE]
 > Please note that this tool is considered experimental; be careful when using it in production and preferably have source control setup to inspect the diffs or restore a backups. Especially since it is meant to be used at the and of production, after mixing stage, when you know you won't need these Actor-Mixers for mixing tasks. That said you should be able to undo all the changes made by the tool with <kbd>ctrl</kbd> + <kbd>z</kbd>.
 
