@@ -39,8 +39,8 @@ As per [Audiokinetic guidelines](https://www.audiokinetic.com/en/public-library/
 The tool will:
 - Identify actor-mixers that can be converted into virtual folders based on the following criteria (all conditions must be met):
 	- Actor-Mixer and its parent share all properties values
-	- Actor-Mixer and its parent share all RTPCs lists and curves (or actor-mixer has no RTPCs)
-	- Actor-Mixer has no states with defined values (or actor-mixer has no states)
+	- Actor-Mixer has no RTPCs with control inputs
+	- Actor-Mixer has no states with defined values
 	- Actor-Mixer is not referenced by any event action
 - List all actor-mixer candidates' names and IDs and prompt you to confirm the conversion.
 - Perform the conversion if confirmed or exit otherwise.

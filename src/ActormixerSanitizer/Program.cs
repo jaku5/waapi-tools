@@ -126,19 +126,19 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 JObject diff = await client.Call(ak.wwise.core.@object.diff, new JObject(
                                                     new JProperty("source", actor["id"]),
                                                     new JProperty("target", ancestor["id"])));
-                
+
+                // Check the actor for active rtpc presence
+                JObject rtpcResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where rtpc.any(@ControlInput.any())", new string[] { "id" });
+
                 // Check if the actor is referenced by an event action
                 JObject referenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\"", new string[] { "id" });
 
-                // Additional check on actor for rtpc presence
-                JObject rtpcResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where rtpc.any()", new string[] { "id" });
-
                 // Create a list of actors to convert 
                 bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
-                bool hasNoDiffLists = diff["lists"] is JArray diffListsArray && !diffListsArray.Any(item => item.ToString().Contains("RTPC")) || rtpcResult[ReturnKey] is JArray rtpcResultArray && !rtpcResultArray.Any();
+                bool hasNoActiveRtpcs = rtpcResult[ReturnKey] is JArray rtpcResultArray && !rtpcResultArray.Any();
                 bool hasNoReferences = referenceResult[ReturnKey] is JArray referenceResultArray && !referenceResultArray.Any();
 
-                if (hasNoDiffProperties && hasNoDiffLists && hasNoReferences)
+                if (hasNoDiffProperties && hasNoActiveRtpcs && hasNoReferences)
                 {
                     actorsToConvert.Add(new JObject(
                         new JProperty("id", actor["id"]),
