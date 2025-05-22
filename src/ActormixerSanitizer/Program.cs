@@ -31,6 +31,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using JPAudio.WaapiTools.ClientJson;
+using System.Collections.Generic;
 
 namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 {
@@ -39,6 +40,10 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
         private const string ObjectGetUri = ak.wwise.core.@object.get;
+        private const string ActorCandidatesQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")";
+
+        private readonly static List<string> unityProperties = new List<string> { "Volume", "Pitch", "Lowpass", "Highpass", "MakeUpGain" };
+
         static async Task Main(string[] args)
         {
             await _Main();
@@ -49,7 +54,10 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             try
             {
                 JsonClient client = await InitializeClientAsync();
-                JArray actors = await GetActorMixersAsync(client);
+
+                var actorQuery = BuildQueryStrings(ActorCandidatesQuery, unityProperties);
+
+                JArray actors = await GetActorMixersAsync(client, actorQuery.Item1, actorQuery.Item2);
                 
                 if (actors != null && actors.Any())
                 {
@@ -91,6 +99,20 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             }
         }
 
+        private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)
+        {
+            string query = actorQuery;
+            string[] returnOptions = { "name", "id", "path", "parent.id" };
+
+            foreach (var property in unityProperties)
+            {
+                query = query + ($" and (randomizer(\"{property.ToLower()}\") = null or randomizer(\"{property.ToLower()}\").enabled = false or (randomizer(\"{property.ToLower()}\").min = 0 and randomizer(\"{property.ToLower()}\").max = 0))");
+                returnOptions = returnOptions.Append(property).ToArray();
+            }
+
+            return (query, returnOptions);
+        }
+
         private static async Task<JsonClient> InitializeClientAsync()
         {
             JsonClient client = new JsonClient();
@@ -99,9 +121,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
             return client;
         }
 
-        private static async Task<JArray> GetActorMixersAsync(JsonClient client)
+        private static async Task<JArray> GetActorMixersAsync(JsonClient client, string query, string[] returnOptions)
         {
-            JObject result = await QueryWaapiAsync(client, "$ from type actormixer where ancestors.any(type = \"actormixer\")", new[] { "name", "id", "path", "parent.id" });
+            JObject result = await QueryWaapiAsync(client, query, returnOptions);
 
             return result[ReturnKey] as JArray;
         }
@@ -112,6 +134,13 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
 
             foreach (var actor in actors)
             {
+                var propertiesToCheck = new List<string>();
+
+                bool hasDiffProperties = true;
+                bool hasDiffUnityProperties = true;
+
+                int unityPropertiesDiffCount = 0;
+
                 // Get actor's first actor-mixer type ancestor
                 // TODO: Check if can be simplified
                 JObject ancestorsResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")", new string[] { "id", "name" });
@@ -127,18 +156,48 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                                                     new JProperty("source", actor["id"]),
                                                     new JProperty("target", ancestor["id"])));
 
+                if (diff["properties"] is JArray diffArray && diffArray.Any())
+                {
+                    foreach (var result in diff["properties"])
+                    {
+                        var propertyName = result;
+                        propertiesToCheck.Add(propertyName.ToString());
+
+                        foreach (var property in unityProperties)
+                        {
+                            propertiesToCheck.Remove(property.ToString());
+                        }
+                    }
+
+                    if (!propertiesToCheck.Any())
+                        hasDiffProperties = false;
+                }
+
+                else
+                {
+                    hasDiffProperties = false;
+                }
+
+                // Check if the value of unity properties is 0 and randomize is not in use
+                foreach (var property in unityProperties)
+                {
+                    if (actor[$"{property}"].ToString() != "0")
+                        unityPropertiesDiffCount++;
+                }
+
+                if (unityPropertiesDiffCount == 0)
+                    hasDiffUnityProperties = false;
+
                 // Check the actor for active rtpc presence
                 JObject rtpcResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where rtpc.any(@ControlInput.any())", new string[] { "id" });
+                bool hasActiveRtpcs = rtpcResult[ReturnKey] is JArray rtpcResultArray && rtpcResultArray.Any();
 
                 // Check if the actor is referenced by an event action
                 JObject referenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\"", new string[] { "id" });
+                bool hasReferences = referenceResult[ReturnKey] is JArray referenceResultArray && referenceResultArray.Any();
 
                 // Create a list of actors to convert 
-                bool hasNoDiffProperties = diff["properties"] is JArray diffPropertiesArray && !diffPropertiesArray.Any();
-                bool hasNoActiveRtpcs = rtpcResult[ReturnKey] is JArray rtpcResultArray && !rtpcResultArray.Any();
-                bool hasNoReferences = referenceResult[ReturnKey] is JArray referenceResultArray && !referenceResultArray.Any();
-
-                if (hasNoDiffProperties && hasNoActiveRtpcs && hasNoReferences)
+                if (!hasDiffProperties && !hasDiffUnityProperties && !hasActiveRtpcs && !hasReferences)
                 {
                     actorsToConvert.Add(new JObject(
                         new JProperty("id", actor["id"]),
@@ -231,6 +290,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         private static async Task RemoveActorsWithActiveStates(JsonClient client, JArray actorsToConvert)
         {
             // Check if any state is present in the actor-mixers and create a temporary query if so
+            // TODO: Improve waql query to check for active states only in the actor-mixer without unity properties diff
             JObject stateReference = await QueryWaapiAsync(client, "$ from type stateGroup where referencesTo.any(type = \"actormixer\" and ancestors.any(type = \"actormixer\")) select children where name != \"None\"", ["id"]);
 
             if (stateReference[ReturnKey].Any())
