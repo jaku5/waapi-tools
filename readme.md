@@ -4,7 +4,7 @@ Waapi Tools is a collection of utilities designed to streamline tasks in Audioki
 
 Currently, the project includes the following tool:
 
-- **[ActormixerSanitizer](https://github.com/jaku5/waapi-tools#actormixer-sanitizer)**: A utility that converts Actor-Mixers into Virtual Folders when they share all properties with their parent Actor-Mixer.
+- **[ActormixerSanitizer](https://github.com/jaku5/waapi-tools#actormixer-sanitizer)**: A utility that converts Actor-Mixers into Virtual Folders if they are not utilized for mixing tasks.
 - More tools coming soon™.
 
 ## Prerequisites
