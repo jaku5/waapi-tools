@@ -102,7 +102,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
         private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)
         {
             string query = actorQuery;
-            string[] returnOptions = { "name", "id", "path", "parent.id" };
+            string[] returnOptions = { "name", "id", "path", "parent.id", "notes" };
 
             foreach (var property in unityProperties)
             {
@@ -205,7 +205,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                         new JProperty("path", actor["path"]),
                         new JProperty("ancestor.id", ancestor["id"]),
                         new JProperty("ancestor.name", ancestor["name"]),
-                        new JProperty("parent.id", actor["parent.id"])));
+                        new JProperty("parent.id", actor["parent.id"]),
+                        new JProperty("notes", actor["notes"])));
                 }
             }
 
@@ -224,7 +225,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer
                 await client.Call(ak.wwise.core.@object.create, new JObject(
                     new JProperty("parent", actor["parent.id"]),
                     new JProperty("type", "Folder"),
-                    new JProperty("name", tempName)));
+                    new JProperty("name", tempName),
+                    new JProperty("notes", actor["notes"])));
             }
 
             // Get children of the actor
