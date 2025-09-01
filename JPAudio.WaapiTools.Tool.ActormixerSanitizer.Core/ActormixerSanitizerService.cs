@@ -9,67 +9,96 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 {
     public class ActormixerSanitizerService
     {
-
+        private readonly JsonClient _client;
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
         private const string ObjectGetUri = ak.wwise.core.@object.get;
         private const string ActorCandidatesQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")";
+        private readonly static List<string> _unityProperties = new List<string> { "Volume", "Pitch", "Lowpass", "Highpass", "MakeUpGain" };
 
-        private readonly static List<string> unityProperties = new List<string> { "Volume", "Pitch", "Lowpass", "Highpass", "MakeUpGain" };
+        public event EventHandler<string> LogMessage;
+        public event EventHandler Disconnected;
 
-        static async Task Main(string[] args)
+        public ActormixerSanitizerService()
         {
-            await _Main();
+            _client = new JsonClient();
+            _client.Disconnected += () => Disconnected?.Invoke(this, EventArgs.Empty);
         }
 
-        static async Task _Main()
+        public async Task ConnectAsync()
         {
-            try
+            await _client.Connect();
+        }
+
+        public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync()
+        {
+            await _client.Call(ak.wwise.core.undo.beginGroup);
+
+            var actorQuery = BuildQueryStrings(ActorCandidatesQuery, _unityProperties);
+            var actors = await GetActorMixersAsync(_client, actorQuery.Item1, actorQuery.Item2);
+            
+            if (actors == null || !actors.Any())
+                return new List<ActorMixerInfo>();
+
+            var processedActors = await ProcessActorsAsync(_client, actors);
+            await RemoveActorsWithActiveStates(_client, processedActors);
+
+            await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                new JProperty("displayName", "Create and remove temp query")));
+
+            return processedActors.Select(a => new ActorMixerInfo
             {
-                JsonClient client = await InitializeClientAsync();
+                Id = a["id"]?.ToString(),
+                Name = a["name"]?.ToString(),
+                Path = a["path"]?.ToString(),
+                ParentId = a["parent.id"]?.ToString(),
+                Notes = a["notes"]?.ToString(),
+                AncestorId = a["ancestor.id"]?.ToString(),
+                AncestorName = a["ancestor.name"]?.ToString()
+            }).ToList();
+        }
 
-                var actorQuery = BuildQueryStrings(ActorCandidatesQuery, unityProperties);
+        public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors)
+        {
+            await _client.Call(ak.wwise.core.undo.beginGroup);
+            
+            foreach (var actor in actors)
+            {
+                LogMessage?.Invoke(this, $"Converting: {actor.Name}");
+                var tempName = $"{actor.Name}Temp";
 
-                JArray actors = await GetActorMixersAsync(client, actorQuery.Item1, actorQuery.Item2);
+                await _client.Call(ak.wwise.core.@object.create, new JObject(
+                    new JProperty("parent", actor.ParentId),
+                    new JProperty("type", "Folder"),
+                    new JProperty("name", tempName),
+                    new JProperty("notes", actor.Notes)));
 
-                if (actors != null && actors.Any())
+                var actorPath = $"\"{actor.Path.Replace("\\\\", "\\")}\"";
+                var folderPath = $"{actor.Path.Replace("\\\\", "\\")}Temp";
+
+                // Move children
+                var childrenResult = await QueryWaapiAsync(_client, $"$ {actorPath} select children", new[] { "name", "id" });
+                if (childrenResult[ReturnKey] is JArray children && children.Any())
                 {
-                    JArray actorsToConvert = await ProcessActorsAsync(client, actors);
-
-                    if (actorsToConvert.Any())
+                    foreach (var child in children)
                     {
-                        await client.Call(ak.wwise.core.undo.beginGroup);
-                        await RemoveActorsWithActiveStates(client, actorsToConvert);
-                        await client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                                            new JProperty("displayName", "Create And Remove Temporary Query")));
-                    }
-
-                    DisplayActorsToConvert(actorsToConvert);
-
-                    Console.WriteLine("\nWould you like to convert these actor-mixers to virtual folders? (y/n)");
-                    if (Console.ReadLine()?.ToLower() == "y")
-                    {
-                        await client.Call(ak.wwise.core.undo.beginGroup);
-                        await ConvertActorsToFoldersAsync(client, actorsToConvert);
-                        await client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                                            new JProperty("displayName", "Sanitize Actor-Mixers")));
-                    }
-                    else
-                    {
-                        Console.WriteLine("User cancelled.");
+                        await _client.Call(ak.wwise.core.@object.move, new JObject(
+                            new JProperty("object", child["id"]),
+                            new JProperty("parent", folderPath)));
                     }
                 }
-                else
-                {
-                    PrintNoCandidatesMessage();
-                }
 
-                ExitProgram();
+                // Delete original actor and rename folder
+                await _client.Call(ak.wwise.core.@object.delete, new JObject(
+                    new JProperty("object", actor.Id)));
+
+                await _client.Call(ak.wwise.core.@object.setName, new JObject(
+                    new JProperty("object", folderPath),
+                    new JProperty("value", actor.Name)));
             }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine(e.Message);
-            }
+
+            await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                new JProperty("displayName", "Sanitize Actor-Mixers")));
         }
 
         private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)
@@ -84,14 +113,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
 
             return (query, returnOptions);
-        }
-
-        private static async Task<JsonClient> InitializeClientAsync()
-        {
-            JsonClient client = new JsonClient();
-            await client.Connect();
-            client.Disconnected += () => Console.WriteLine("We lost connection!");
-            return client;
         }
 
         private static async Task<JArray> GetActorMixersAsync(JsonClient client, string query, string[] returnOptions)
@@ -123,7 +144,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 var ancestor = ancestorsArray[0];
 
                 // Check for differences between the actor and its ancestor
-                Console.WriteLine($"Processing: {actor["name"]} (ID: {actor["id"]})");
+                //LogMessage?.Invoke(client, $"Processing: {actor["name"]} (ID: {actor["id"]})");
 
                 JObject diff = await client.Call(ak.wwise.core.@object.diff, new JObject(
                                                     new JProperty("source", actor["id"]),
@@ -136,7 +157,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                         var propertyName = result;
                         propertiesToCheck.Add(propertyName.ToString());
 
-                        foreach (var property in unityProperties)
+                        foreach (var property in _unityProperties)
                         {
                             propertiesToCheck.Remove(property.ToString());
                         }
@@ -152,7 +173,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 }
 
                 // Check if the value of unity properties is 0 and randomize is not in use
-                foreach (var property in unityProperties)
+                foreach (var property in _unityProperties)
                 {
                     if (actor[$"{property}"].ToString() != "0")
                         unityPropertiesDiffCount++;
@@ -184,82 +205,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
 
             return actorsToConvert;
-        }
-
-        private static async Task ConvertActorsToFoldersAsync(JsonClient client, JArray actorsToConvert)
-        {
-            // Create a folder for each actor
-            foreach (var actor in actorsToConvert)
-            {
-                var tempName = $"{actor["name"]}Temp";
-
-                Console.WriteLine($"\nConverting: {actor["name"]} (ID: {actor["id"]})");
-
-                await client.Call(ak.wwise.core.@object.create, new JObject(
-                    new JProperty("parent", actor["parent.id"]),
-                    new JProperty("type", "Folder"),
-                    new JProperty("name", tempName),
-                    new JProperty("notes", actor["notes"])));
-            }
-
-            // Get children of the actor
-            var childrenToMove = new JArray();
-
-            foreach (var actor in actorsToConvert)
-            {
-                var actorPath = $"\"{actor["path"].ToString().Replace("\\\\", "\\")}\"";
-                var folderPath = $"{actor["path"].ToString().Replace("\\\\", "\\")}Temp";
-
-                Console.WriteLine($"\nMoving children of: {actor["name"]} (ID: {actor["id"]})");
-
-                var queryChildren = new JObject(
-                    new JProperty(WaqlKey, $"$ {actorPath} select children"));
-
-                JObject resultChildren = await client.Call(ObjectGetUri, queryChildren);
-
-                // Copy the children to the new folder
-                if (resultChildren[ReturnKey] is JArray resultsArrayChildren && resultsArrayChildren.Any())
-                {
-                    foreach (var child in resultChildren[ReturnKey])
-                    {
-                        Console.WriteLine($"\nMoving: {child["name"]} (ID: {child["id"]})");
-
-                        await client.Call(ak.wwise.core.@object.move, new JObject(
-                            new JProperty("object", child["id"]),
-                            new JProperty("parent", folderPath)));
-                    }
-                }
-                // Delete the actor
-                Console.WriteLine($"\nDeleting: {actor["name"]} (ID: {actor["id"]}");
-
-                await client.Call(ak.wwise.core.@object.delete, new JObject(
-                     new JProperty("object", actor["id"])));
-
-                // Rename the folder
-                await client.Call(ak.wwise.core.@object.setName, new JObject(
-                    new JProperty("object", folderPath),
-                    new JProperty("value", actor["name"])));
-            }
-        }
-
-        private static void DisplayActorsToConvert(JArray actorsToConvert)
-        {
-            Console.Clear();
-
-            if (!actorsToConvert.Any())
-            {
-                PrintNoCandidatesMessage();
-                ExitProgram();
-            }
-
-            else
-            {
-                Console.WriteLine("The following actor-mixers can be converted to virtual folders:\n");
-                foreach (var actor in actorsToConvert)
-                {
-                    Console.WriteLine($"- {actor["name"]} (ID: {actor["id"]})");
-                }
-            }
         }
 
         private static async Task RemoveActorsWithActiveStates(JsonClient client, JArray actorsToConvert)
@@ -318,19 +263,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
         }
 
-        private static void ExitProgram()
-        {
-            Console.WriteLine("\nDone. Press any key to exit.");
-            Console.ReadLine();
-
-            Environment.Exit(0);
-        }
-
-        private static void PrintNoCandidatesMessage()
-        {
-            Console.Clear();
-            Console.WriteLine("No actor-mixers to sanitize found. Good job!");
-        }
         private static async Task<JObject> QueryWaapiAsync(JsonClient client, string waql, string[] returnFields)
         {
             var query = new JObject(new JProperty(WaqlKey, waql));
@@ -338,5 +270,16 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             return await client.Call(ObjectGetUri, query, options);
         }
+    }
+
+    public class ActorMixerInfo
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Path { get; set; }
+        public string ParentId { get; set; }
+        public string Notes { get; set; }
+        public string AncestorId { get; set; }
+        public string AncestorName { get; set; }
     }
 }
