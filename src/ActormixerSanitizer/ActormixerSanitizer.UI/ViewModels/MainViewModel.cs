@@ -94,8 +94,7 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             await _service.ConvertToFoldersAsync(selectedActors);
-            //await ScanAsync(); // Refresh the list
-            ActorMixers.Clear(); // Clear the list
+            await ScanAsync(); // Refresh the list
         }
         catch (Exception ex)
         {

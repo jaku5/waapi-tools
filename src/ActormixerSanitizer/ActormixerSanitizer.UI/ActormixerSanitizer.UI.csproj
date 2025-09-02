@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core\ActormixerSanitizer.Core.csproj" />
+    <ProjectReference Include="..\ActormixerSanitizer.Core\ActormixerSanitizer.Core.csproj" />
   </ItemGroup>
 
 </Project>

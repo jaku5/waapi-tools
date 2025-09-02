@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\ClientJson\ClientJson.csproj" />
+    <ProjectReference Include="..\..\ClientJson\ClientJson.csproj" />
   </ItemGroup>
 
 </Project>
