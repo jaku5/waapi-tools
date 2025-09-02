@@ -281,5 +281,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public string Notes { get; set; }
         public string AncestorId { get; set; }
         public string AncestorName { get; set; }
+        public bool IsSelected { get; set; }
     }
 }

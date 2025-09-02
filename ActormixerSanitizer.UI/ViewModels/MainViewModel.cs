@@ -5,17 +5,18 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Linq;
 
 public class MainViewModel : INotifyPropertyChanged
 {
     private readonly ActormixerSanitizerService _service;
     private ObservableCollection<ActorMixerInfo> _actorMixers;
     private string _logText = "";
-    
+
     public ICommand ConnectCommand { get; }
     public ICommand ScanCommand { get; }
     public ICommand ConvertCommand { get; }
-    
+
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
         get => _actorMixers;
@@ -25,8 +26,6 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
-
-    public IList SelectedActors { get; set; }
 
     public string LogText
     {
@@ -43,9 +42,9 @@ public class MainViewModel : INotifyPropertyChanged
         _service = new ActormixerSanitizerService();
         _service.LogMessage += OnLogMessage;
         _service.Disconnected += OnDisconnected;
-        
+
         ActorMixers = new ObservableCollection<ActorMixerInfo>();
-        
+
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
         ScanCommand = new AsyncRelayCommand(ScanAsync);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
@@ -84,8 +83,9 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConvertAsync()
     {
-        SelectedActors = ActorMixers;
-        if (SelectedActors?.Count == 0)
+        var selectedActors = ActorMixers.Where(a => a.IsSelected).ToList();
+
+        if (selectedActors.Count == 0)
         {
             AddLog("No actors selected");
             return;
@@ -93,7 +93,6 @@ public class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            var selectedActors = SelectedActors?.Cast<ActorMixerInfo>().ToList();
             await _service.ConvertToFoldersAsync(selectedActors);
             //await ScanAsync(); // Refresh the list
             ActorMixers.Clear(); // Clear the list
