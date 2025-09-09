@@ -124,6 +124,9 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 actor.IsSelected = !actor.IsSelected;
             }
+
+            // ActorMixers = new ObservableCollection<ActorMixerInfo>(ActorMixers);
+
         }
 
         else
