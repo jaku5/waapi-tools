@@ -17,6 +17,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ScanCommand { get; }
     public ICommand SelectAllCommand { get; }
     public ICommand SelectNoneCommand { get; }
+    public ICommand ToggleSelectedCommand { get; }
     public ICommand ConvertCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
@@ -51,6 +52,7 @@ public class MainViewModel : INotifyPropertyChanged
         ScanCommand = new AsyncRelayCommand(ScanAsync);
         SelectAllCommand = new RelayCommand(SelectAll);
         SelectNoneCommand = new RelayCommand(SelectNone);
+        ToggleSelectedCommand = new RelayCommand<IList>(ToggleSelected);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
     }
 
@@ -94,8 +96,6 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 actor.IsSelected = true;
             }
-
-            ActorMixers = new ObservableCollection<ActorMixerInfo>(ActorMixers); // Refresh the binding
         }
 
         else
@@ -110,12 +110,24 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 actor.IsSelected = false;
             }
-
-            ActorMixers = new ObservableCollection<ActorMixerInfo>(ActorMixers); // Refresh the binding
         }
 
         else
             AddLog("Nothing to deselect");
+    }
+
+    private void ToggleSelected(IList selectedItems)
+    {
+        if (selectedItems != null && selectedItems.Count > 0)
+        {
+            foreach (ActorMixerInfo actor in selectedItems.OfType<ActorMixerInfo>().ToList())
+            {
+                actor.IsSelected = !actor.IsSelected;
+            }
+        }
+
+        else
+            AddLog("Nothing to toggle");
     }
 
 
