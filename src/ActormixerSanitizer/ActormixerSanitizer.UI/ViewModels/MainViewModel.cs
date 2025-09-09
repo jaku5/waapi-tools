@@ -15,6 +15,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public ICommand ConnectCommand { get; }
     public ICommand ScanCommand { get; }
+    public ICommand SelectAllCommand { get; }
     public ICommand ConvertCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
@@ -46,7 +47,8 @@ public class MainViewModel : INotifyPropertyChanged
         ActorMixers = new ObservableCollection<ActorMixerInfo>();
 
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
-        ScanCommand = new AsyncRelayCommand(ScanAsync);
+                ScanCommand = new AsyncRelayCommand(ScanAsync);
+        SelectAllCommand = new RelayCommand(SelectAll);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
     }
 
@@ -81,6 +83,17 @@ public class MainViewModel : INotifyPropertyChanged
             AddLog($"Scan failed: {ex.Message}");
         }
     }
+
+    private void SelectAll()
+    {
+        foreach (var actor in ActorMixers)
+        {
+            actor.IsSelected = true;
+        }
+    }
+
+
+
 
     private async Task ConvertAsync()
     {
