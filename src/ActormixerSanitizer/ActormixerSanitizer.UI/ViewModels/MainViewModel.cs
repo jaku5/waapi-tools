@@ -16,6 +16,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ConnectCommand { get; }
     public ICommand ScanCommand { get; }
     public ICommand SelectAllCommand { get; }
+    public ICommand SelectNoneCommand { get; }
     public ICommand ConvertCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
@@ -47,8 +48,9 @@ public class MainViewModel : INotifyPropertyChanged
         ActorMixers = new ObservableCollection<ActorMixerInfo>();
 
         ConnectCommand = new AsyncRelayCommand(ConnectAsync);
-                ScanCommand = new AsyncRelayCommand(ScanAsync);
+        ScanCommand = new AsyncRelayCommand(ScanAsync);
         SelectAllCommand = new RelayCommand(SelectAll);
+        SelectNoneCommand = new RelayCommand(SelectNone);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
     }
 
@@ -86,13 +88,35 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void SelectAll()
     {
-        foreach (var actor in ActorMixers)
+        if (ActorMixers.Any())
         {
-            actor.IsSelected = true;
+            foreach (var actor in ActorMixers)
+            {
+                actor.IsSelected = true;
+            }
+
+            ActorMixers = new ObservableCollection<ActorMixerInfo>(ActorMixers); // Refresh the binding
         }
+
+        else
+            AddLog("Nothing to select");
     }
 
+    private void SelectNone()
+    {
+        if (ActorMixers.Any())
+        {
+            foreach (var actor in ActorMixers)
+            {
+                actor.IsSelected = false;
+            }
 
+            ActorMixers = new ObservableCollection<ActorMixerInfo>(ActorMixers); // Refresh the binding
+        }
+
+        else
+            AddLog("Nothing to deselect");
+    }
 
 
     private async Task ConvertAsync()

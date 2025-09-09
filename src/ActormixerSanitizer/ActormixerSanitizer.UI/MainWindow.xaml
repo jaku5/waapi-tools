@@ -18,6 +18,8 @@
                     Width="100" Margin="0,0,10,0"/>
             <Button Content="Select All" Command="{Binding SelectAllCommand}"
                     Width="100" Margin="0,0,10,0"/>
+            <Button Content="Select None" Command="{Binding SelectNoneCommand}"
+                    Width="100" Margin="0,0,10,0"/>
         </StackPanel>
 
         <!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
