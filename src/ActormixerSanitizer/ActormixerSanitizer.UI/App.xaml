@@ -1,9 +1,7 @@
 ﻿<Application x:Class="ActormixerSanitizer.UI.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ActormixerSanitizer.UI"
-             StartupUri="MainWindow.xaml"
-             ThemeMode="Light">
+             xmlns:local="clr-namespace:ActormixerSanitizer.UI">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
