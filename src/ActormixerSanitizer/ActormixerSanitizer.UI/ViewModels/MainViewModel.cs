@@ -77,7 +77,7 @@ public class MainViewModel : INotifyPropertyChanged
             ActorMixers.Clear();
             foreach (var actor in actors)
             {
-                actor.IsSelected = true; // Select all by default
+                actor.IsSelected = true;
                 ActorMixers.Add(actor);
             }
             AddLog($"Found {actors.Count} actor mixers that can be converted");
@@ -124,9 +124,6 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 actor.IsSelected = !actor.IsSelected;
             }
-
-            // ActorMixers = new ObservableCollection<ActorMixerInfo>(ActorMixers);
-
         }
 
         else
