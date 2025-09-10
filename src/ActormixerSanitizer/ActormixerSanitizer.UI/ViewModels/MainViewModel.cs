@@ -18,6 +18,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SelectAllCommand { get; }
     public ICommand SelectNoneCommand { get; }
     public ICommand ToggleSelectedCommand { get; }
+    public ICommand ToggleActorSelectedCommand { get; }
     public ICommand ConvertCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
@@ -53,6 +54,7 @@ public class MainViewModel : INotifyPropertyChanged
         SelectAllCommand = new RelayCommand(SelectAll);
         SelectNoneCommand = new RelayCommand(SelectNone);
         ToggleSelectedCommand = new RelayCommand<IList>(ToggleSelected);
+        ToggleActorSelectedCommand = new RelayCommand<ActorMixerInfo>(ToggleActorSelected);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
     }
 
@@ -128,6 +130,14 @@ public class MainViewModel : INotifyPropertyChanged
 
         else
             AddLog("Nothing to toggle");
+    }
+
+    private void ToggleActorSelected(ActorMixerInfo actor)
+    {
+        if (actor != null)
+        {
+            actor.IsSelected = !actor.IsSelected;
+        }
     }
 
 

@@ -1,6 +1,7 @@
 ﻿<Window x:Class="ActormixerSanitizer.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         Title="Actormixer Sanitizer" Height="450" Width="800"
         ThemeMode="System">
     <Grid Margin="10">
@@ -32,6 +33,12 @@
                  SelectionMode="Extended"
                  HorizontalContentAlignment="Stretch"
                  BorderThickness="0">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="MouseDoubleClick">
+                    <i:InvokeCommandAction Command="{Binding DataContext.ToggleActorSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItem}" />
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <!-- Keep ListBox selection and the item's IsSelected property synchronized
