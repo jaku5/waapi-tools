@@ -270,5 +270,12 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             return await client.Call(ObjectGetUri, query, options);
         }
+
+        public async Task SelectInProjectExplorer(string actorId)
+        {
+            await _client.Call(ak.wwise.ui.commands.execute, new JObject(
+                new JProperty("command", "FindInProjectExplorerSyncGroup1"),
+                new JProperty("objects", new JArray(actorId))));
+        }
     }
 }

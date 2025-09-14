@@ -37,7 +37,6 @@
                     <!-- Keep ListBox selection and the item's IsSelected property synchronized
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/> -->
                     <!-- TODO2: Doubliclick to toggle checkmark -->
-                    <!-- TODO3: ~~Context menu for copying name, id, path~~ and selecting in Wwise -->
                     <!-- TODO4: Save to Wwise Querry Button -->
                     <!-- TODO5: Improve connection flow, logging and error handling -->
                     <!-- TODO6: Adjustable logging window size -->
@@ -52,7 +51,7 @@
                                 <MenuItem Header="Copy name" Command="{Binding PlacementTarget.Tag.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                                 <MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                                 <MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="Select in Wwise"/>
+                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
