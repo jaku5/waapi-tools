@@ -3,9 +3,10 @@ using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+    using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
-using System.Linq;
 
 public class MainViewModel : INotifyPropertyChanged
 {
@@ -19,6 +20,9 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SelectNoneCommand { get; }
     public ICommand ToggleSelectedCommand { get; }
     public ICommand ConvertCommand { get; }
+    public ICommand CopyNameCommand { get; }
+    public ICommand CopyIdCommand { get; }
+    public ICommand CopyPathCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
@@ -54,6 +58,9 @@ public class MainViewModel : INotifyPropertyChanged
         SelectNoneCommand = new RelayCommand(SelectNone);
         ToggleSelectedCommand = new RelayCommand<IList>(ToggleSelected);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
+        CopyNameCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Name));
+        CopyIdCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Id));
+        CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
     }
 
     private async Task ConnectAsync()
@@ -149,6 +156,15 @@ public class MainViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             AddLog($"Conversion failed: {ex.Message}");
+        }
+    }
+
+    private void CopyToClipboard(string text)
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            Clipboard.SetText(text);
+            AddLog($"Copied to clipboard: {text}");
         }
     }
 
