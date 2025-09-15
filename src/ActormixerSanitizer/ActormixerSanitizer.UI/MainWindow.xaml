@@ -32,7 +32,8 @@
                  ItemsSource="{Binding ActorMixers}"
                  SelectionMode="Extended"
                  HorizontalContentAlignment="Stretch"
-                 BorderThickness="0">
+                 BorderThickness="0"
+                 Background="Transparent">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <!-- Keep ListBox selection and the item's IsSelected property synchronized
@@ -76,7 +77,7 @@
 
         </ListBox>
 
-        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" ShowsPreview="True"/>
+        <GridSplitter Grid.Row="2" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>
 
         <TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}"
                  IsReadOnly="True" TextWrapping="Wrap"
