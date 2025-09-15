@@ -6,8 +6,9 @@
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="100"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -37,11 +38,9 @@
                     <!-- Keep ListBox selection and the item's IsSelected property synchronized
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/> -->
                     <!-- TODO2: Doubliclick to toggle checkmark -->
-                    <!-- TODO4: Save to Wwise Querry Button -->
                     <!-- TODO5: Improve connection flow, logging and error handling -->
-                    <!-- TODO6: Adjustable logging window size -->
+                    
                     <!-- TODO7: Icons and shipit -->
-                    <!-- TODO7: White sapce in Watch copy logs-->
                     <Setter Property="Tag" Value="{Binding DataContext, ElementName=ActorMixerListBox}"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
@@ -77,11 +76,13 @@
 
         </ListBox>
 
-        <TextBox Grid.Row="2" Text="{Binding LogText, Mode=OneWay}"
+        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" ShowsPreview="True"/>
+
+        <TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}"
                  IsReadOnly="True" TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"/>
 
-        <Button Grid.Row="3" Content="Convert Selected to Folders" 
+        <Button Grid.Row="4" Content="Convert Selected to Folders" 
                 Command="{Binding ConvertCommand}"
                 Height="30" Margin="0,10,0,0"/>
     </Grid>
