@@ -3,7 +3,7 @@ using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-    using System.Linq;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -45,6 +45,8 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
     public MainViewModel()
     {
@@ -144,7 +146,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConvertAsync()
     {
-        var selectedActors = ActorMixers.Where(a => a.IsSelected).ToList();
+        var selectedActors = SelectedActors.ToList();
 
         if (selectedActors.Count == 0)
         {
@@ -200,7 +202,13 @@ public class MainViewModel : INotifyPropertyChanged
     }
     private async Task ShowSelectedList()
     {
-        var selectedActors = ActorMixers.Where(a => a.IsSelected).ToList();
+        var selectedActors = SelectedActors.ToList();
+
+        if (!selectedActors.Any())
+        {
+            AddLog("No selected actors tho show");
+            return;
+        }
 
         try
         {
