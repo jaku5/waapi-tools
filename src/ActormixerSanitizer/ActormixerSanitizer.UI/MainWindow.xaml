@@ -24,6 +24,8 @@
             <Button Content="Toggle Selected" Command="{Binding ToggleSelectedCommand}"
                     CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItems}"
                     Width="100" Margin="0,0,10,0"/>
+            <Button Content="Show Selected List" Command="{Binding ShowSelectedListCommand}"
+                    Width="100" Margin="0,0,10,0"/>
         </StackPanel>
 
         <!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->

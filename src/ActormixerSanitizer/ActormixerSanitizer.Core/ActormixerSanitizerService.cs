@@ -274,8 +274,21 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public async Task SelectInProjectExplorer(string actorId)
         {
             await _client.Call(ak.wwise.ui.commands.execute, new JObject(
-                new JProperty("command", "FindInProjectExplorerSyncGroup1"),
+                new JProperty("command", "FindInProjectExplorerSelectionChannel1"),
                 new JProperty("objects", new JArray(actorId))));
+        }
+
+        public async Task ShowInListView(List<ActorMixerInfo> actors)
+        {
+            var actorsToShow = new JArray();
+
+            foreach (var actor in actors)
+            {
+                actorsToShow.Add(actor.Id);
+            }
+            await _client.Call(ak.wwise.ui.commands.execute, new JObject(
+            new JProperty("command", "ShowListView"),
+            new JProperty("objects", new JArray(actorsToShow))));
         }
     }
 }

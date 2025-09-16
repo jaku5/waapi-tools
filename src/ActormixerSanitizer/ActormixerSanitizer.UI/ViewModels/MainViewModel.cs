@@ -24,6 +24,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CopyIdCommand { get; }
     public ICommand CopyPathCommand { get; }
     public ICommand SelectInWwiseCommand { get; }
+    public ICommand ShowSelectedListCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
@@ -63,6 +64,7 @@ public class MainViewModel : INotifyPropertyChanged
         CopyIdCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Id));
         CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
+        ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
     }
 
     private async Task ConnectAsync()
@@ -194,6 +196,19 @@ public class MainViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             AddLog($"Select in Wwise failed: {ex.Message}");
+        }
+    }
+    private async Task ShowSelectedList()
+    {
+        var selectedActors = ActorMixers.Where(a => a.IsSelected).ToList();
+
+        try
+        {
+            await _service.ShowInListView(selectedActors);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Show list failed: {ex.Message}");
         }
     }
 
