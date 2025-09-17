@@ -38,12 +38,11 @@
                  Background="Transparent">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
-                    <!-- Keep ListBox selection and the item's IsSelected property synchronized
+                    <!-- Keep ListBox selection and the item's IsSelected property synchronized 
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/> -->
-                    <!-- TODO2: Doubliclick to toggle checkmark -->
-                    <!-- TODO5: Improve connection flow, logging and error handling -->
-                    
-                    <!-- TODO7: Icons and shipit -->
+                    <!-- Double-click will toggle the checkmark -->
+                    <EventSetter Event="MouseDoubleClick" Handler="ListBoxItem_MouseDoubleClick"/>
+
                     <Setter Property="Tag" Value="{Binding DataContext, ElementName=ActorMixerListBox}"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
