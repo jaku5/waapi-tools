@@ -25,6 +25,11 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             _client.Disconnected += () => Disconnected?.Invoke(this, EventArgs.Empty);
         }
 
+        public void Disconnect()
+        {
+            _client.Disconnect();
+        }
+
         public async Task ConnectAsync()
         {
             await _client.Connect();

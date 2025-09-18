@@ -84,6 +84,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConnectAsync()
     {
+        _service.Disconnect();
         try
         {
             await _service.ConnectAsync();

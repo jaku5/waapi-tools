@@ -54,6 +54,11 @@ namespace JPAudio.WaapiTools.ClientJson
             }
         }
 
+        public void Disconnect()
+        {
+            client.Disconnect();
+        }
+
         /// <summary>Connect to a running instance of Wwise Authoring.</summary>
         /// <param name="uri">URI to connect. Usually the WebSocket protocol (ws:) followed by the hostname and port, followed by waapi.</param>
         /// <example>Connect("ws://localhost:8080/waapi")</example>

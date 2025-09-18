@@ -54,14 +54,19 @@ namespace JPAudio.WaapiTools.ClientCore
             await wamp.Connect(uri, timeout);
         }
 
-        private void Wamp_Disconnected()
-        {
-            if (Disconnected != null)
-            {
-                Disconnected();
-            }
-        }
-
+                private void Wamp_Disconnected()
+                {
+                    if (Disconnected != null)
+                    {
+                        Disconnected();
+                        wamp = null;
+                    }
+                }
+        
+                public void Disconnect()
+                {
+                    Wamp_Disconnected();
+                }
         /// <summary>Close the connection.</summary>
         /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         public async System.Threading.Tasks.Task Close(
