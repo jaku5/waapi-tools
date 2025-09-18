@@ -43,10 +43,10 @@ namespace JPAudio.WaapiTools.ClientCore
         /// <example>Connect("ws://localhost:8080/waapi")</example>
         /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         public async System.Threading.Tasks.Task Connect(
-            string uri = "ws://localhost:8080/waapi", 
+            string uri = "ws://localhost:8080/waapi",
             int timeout = int.MaxValue)
         {
-            if(wamp != null)
+            if (wamp != null)
                 throw new System.Exception("Connection is already established");
 
             wamp = new Wamp();
@@ -54,21 +54,23 @@ namespace JPAudio.WaapiTools.ClientCore
             await wamp.Connect(uri, timeout);
         }
 
-                private void Wamp_Disconnected()
-                {
-                    if (Disconnected != null)
-                    {
-                        Disconnected();
-                        wamp = null;
-                    }
-                }
-        
-                public void Disconnect()
-                {
-                    Wamp_Disconnected();
-                }
-        /// <summary>Close the connection.</summary>
-        /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
+        private void Wamp_Disconnected()
+        {
+            if (Disconnected != null)
+            {
+                Disconnected();
+                wamp = null;
+            }
+        }
+
+        public void Disconnect()
+        {
+            if (wamp != null)
+            {
+                Wamp_Disconnected();
+            }
+        }        /// <summary>Close the connection.</summary>
+                 /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         public async System.Threading.Tasks.Task Close(
             int timeout = int.MaxValue)
         {
@@ -99,14 +101,14 @@ namespace JPAudio.WaapiTools.ClientCore
         /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         /// <returns>A JSON string with the result of the Remote Procedure Call.</returns>
         public async System.Threading.Tasks.Task<string> Call(
-            string uri, 
-            string args = "{}", 
-            string options = "{}", 
+            string uri,
+            string args = "{}",
+            string options = "{}",
             int timeout = int.MaxValue)
         {
             if (wamp == null)
                 throw new System.Exception("WAMP connection is not established");
-            
+
             if (args == null)
                 args = "{}";
             if (options == null)
@@ -122,9 +124,9 @@ namespace JPAudio.WaapiTools.ClientCore
         /// <param name="timeout">The maximum timeout in milliseconds for the function to execute. Will raise Waapi.TimeoutException when timeout is reached.</param>
         /// <returns>Subscription id, that you can use to unsubscribe.</returns>
         public async System.Threading.Tasks.Task<int> Subscribe(
-            string topic, 
-            string options, 
-            Wamp.PublishHandler publishHandler, 
+            string topic,
+            string options,
+            Wamp.PublishHandler publishHandler,
             int timeout = int.MaxValue)
         {
             if (wamp == null)
@@ -139,7 +141,7 @@ namespace JPAudio.WaapiTools.ClientCore
         /// <summary>Unsubscribe from a subscription.</summary>
         /// <param name="subscriptionId">The subscription id received from the initial subscription.</param>
         public async System.Threading.Tasks.Task Unsubscribe(
-            int subscriptionId, 
+            int subscriptionId,
             int timeout = int.MaxValue)
         {
             if (wamp == null)
