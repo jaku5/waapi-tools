@@ -13,8 +13,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="Connect" Command="{Binding ConnectCommand}" 
-                    Width="100" Margin="0,0,10,0"/>
+            <Button Content="Connect" Command="{Binding ConnectCommand}"
+                    Width="100" Margin="0,0,10,0" IsEnabled="{Binding IsNotConnected}"/>
             <Button Content="Scan" Command="{Binding ScanCommand}"
                     Width="100" Margin="0,0,10,0"/>
             <Button Content="Select All" Command="{Binding SelectAllCommand}"

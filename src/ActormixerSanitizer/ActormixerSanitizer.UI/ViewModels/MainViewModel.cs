@@ -46,6 +46,17 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isNotConnected;
+    public bool IsNotConnected
+    {
+        get => _isNotConnected;
+        set
+        {
+            _isNotConnected = value;
+            OnPropertyChanged();
+        }
+    }
+
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
     public MainViewModel()
@@ -67,6 +78,8 @@ public class MainViewModel : INotifyPropertyChanged
         CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
         ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
+
+        _ = ConnectAsync();
     }
 
     private async Task ConnectAsync()
@@ -75,10 +88,12 @@ public class MainViewModel : INotifyPropertyChanged
         {
             await _service.ConnectAsync();
             AddLog("Connected to Wwise");
+            IsNotConnected = false;
         }
         catch (Exception ex)
         {
             AddLog($"Connection failed: {ex.Message}");
+            IsNotConnected = true;
         }
     }
 
@@ -182,6 +197,7 @@ public class MainViewModel : INotifyPropertyChanged
     private void OnDisconnected(object sender, EventArgs e)
     {
         AddLog("Disconnected from Wwise");
+        IsNotConnected = true;
     }
 
     private void AddLog(string message)
