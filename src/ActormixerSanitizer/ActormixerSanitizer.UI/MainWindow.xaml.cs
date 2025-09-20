@@ -29,5 +29,13 @@ namespace ActormixerSanitizer.UI
                 e.Handled = true;
             }
         }
+
+        private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                await vm.Cleanup();
+            }
+        }
     }
 }

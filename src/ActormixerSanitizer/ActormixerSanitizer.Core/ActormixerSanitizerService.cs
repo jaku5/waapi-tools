@@ -18,6 +18,48 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public event EventHandler<string> LogMessage;
         public event EventHandler Disconnected;
+        public event EventHandler ProjectStateChanged;
+
+        private bool _isDirty = false;
+        private List<int> _subscriptionIds = new List<int>();
+
+        public async Task SubscribeToChangesAsync(List<ActorMixerInfo> actors)
+        {
+            await UnsubscribeFromChangesAsync();
+
+            var nameChangedId = await _client.Subscribe(ak.wwise.core.@object.nameChanged, null, OnProjectStateChanged);
+            _subscriptionIds.Add(nameChangedId);
+
+            var postDeletedId = await _client.Subscribe(ak.wwise.core.@object.postDeleted, null, OnProjectStateChanged);
+            _subscriptionIds.Add(postDeletedId);
+
+            foreach (var actor in actors)
+            {
+                foreach (var property in _unityProperties)
+                {
+                    var options = new JObject(
+                        new JProperty("object", actor.Id),
+                        new JProperty("property", property));
+                    var propertyChangedId = await _client.Subscribe(ak.wwise.core.@object.propertyChanged, options, OnProjectStateChanged);
+                    _subscriptionIds.Add(propertyChangedId);
+                }
+            }
+        }
+
+        private void OnProjectStateChanged(JObject json)
+        {
+            _isDirty = true;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public async Task UnsubscribeFromChangesAsync()
+        {
+            foreach (var id in _subscriptionIds)
+            {
+                await _client.Unsubscribe(id);
+            }
+            _subscriptionIds.Clear();
+        }
 
         public ActormixerSanitizerService()
         {
@@ -41,7 +83,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             var actorQuery = BuildQueryStrings(ActorCandidatesQuery, _unityProperties);
             var actors = await GetActorMixersAsync(_client, actorQuery.Item1, actorQuery.Item2);
-            
+
             if (actors == null || !actors.Any())
                 return new List<ActorMixerInfo>();
 
@@ -66,7 +108,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors)
         {
             await _client.Call(ak.wwise.core.undo.beginGroup);
-            
+
             foreach (var actor in actors)
             {
                 LogMessage?.Invoke(this, $"Converting: {actor.Name}");

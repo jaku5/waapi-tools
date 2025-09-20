@@ -57,6 +57,17 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isDirty;
+    public bool IsDirty
+    {
+        get => _isDirty;
+        set
+        {
+            _isDirty = value;
+            OnPropertyChanged();
+        }
+    }
+
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
     public MainViewModel()
@@ -64,6 +75,7 @@ public class MainViewModel : INotifyPropertyChanged
         _service = new ActormixerSanitizerService();
         _service.LogMessage += OnLogMessage;
         _service.Disconnected += OnDisconnected;
+        _service.ProjectStateChanged += OnProjectStateChanged;
 
         ActorMixers = new ObservableCollection<ActorMixerInfo>();
 
@@ -100,13 +112,15 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ScanAsync()
     {
+        IsDirty = false;
         try
         {
             var actors = await _service.GetSanitizableMixersAsync();
+            await _service.SubscribeToChangesAsync(actors);
             ActorMixers.Clear();
             foreach (var actor in actors)
             {
-                actor.IsSelected = true;
+                actor.IsSelected = actor.IsSelected;
                 ActorMixers.Add(actor);
             }
             AddLog($"Found {actors.Count} actor mixers that can be converted");
@@ -162,6 +176,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConvertAsync()
     {
+        if (IsDirty)
+        {
+            AddLog("Project has changed, please scan again before converting.");
+            return;
+        }
+
         var selectedActors = SelectedActors.ToList();
 
         if (selectedActors.Count == 0)
@@ -199,6 +219,12 @@ public class MainViewModel : INotifyPropertyChanged
     {
         AddLog("Disconnected from Wwise");
         IsNotConnected = true;
+    }
+
+    private void OnProjectStateChanged(object sender, EventArgs e)
+    {
+        IsDirty = true;
+        AddLog("Wwise project has changed. Please re-scan.");
     }
 
     private void AddLog(string message)
@@ -241,5 +267,10 @@ public class MainViewModel : INotifyPropertyChanged
     protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public async Task Cleanup()
+    {
+        await _service.UnsubscribeFromChangesAsync();
     }
 }
