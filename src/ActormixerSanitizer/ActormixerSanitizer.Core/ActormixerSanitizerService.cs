@@ -23,14 +23,24 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         private bool _isDirty = false;
         private List<int> _subscriptionIds = new List<int>();
 
+        // Track only IDs we care about so we don't mark dirty for unrelated changes.
+        private HashSet<string> _trackedActorIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private HashSet<string> _trackedParentIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public async Task SubscribeToChangesAsync(List<ActorMixerInfo> actors)
         {
-            await UnsubscribeFromChangesAsync();
+                await UnsubscribeFromChangesAsync();
 
-            var nameChangedId = await _client.Subscribe(ak.wwise.core.@object.nameChanged, null, OnProjectStateChanged);
+            // Populate tracked id sets based on the current scan results
+            _trackedActorIds = new HashSet<string>(actors.Where(a => !string.IsNullOrEmpty(a.Id)).Select(a => a.Id), StringComparer.OrdinalIgnoreCase);
+            _trackedParentIds = new HashSet<string>(actors.Where(a => !string.IsNullOrEmpty(a.ParentId)).Select(a => a.ParentId), StringComparer.OrdinalIgnoreCase);
+
+            // Subscribe to name changes -> only interested if object is in our list
+            var nameChangedId = await _client.Subscribe(ak.wwise.core.@object.nameChanged, null, OnNameChanged);
             _subscriptionIds.Add(nameChangedId);
 
-            var postDeletedId = await _client.Subscribe(ak.wwise.core.@object.postDeleted, null, OnProjectStateChanged);
+            // Subscribe to postDeleted -> interested if deleted object is either a tracked actor or a parent of one
+            var postDeletedId = await _client.Subscribe(ak.wwise.core.@object.postDeleted, null, OnObjectsPostDeleted);
             _subscriptionIds.Add(postDeletedId);
 
             foreach (var actor in actors)
@@ -46,10 +56,113 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
         }
 
+        // Keep original behavior for propertyChanged subscriptions and any other generic triggers
         private void OnProjectStateChanged(JObject json)
         {
             _isDirty = true;
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Handler for name changes: only mark dirty if the changed object is one we track.
+        private void OnNameChanged(JObject json)
+        {
+            try
+            {
+                var ids = GetIdsFromPublish(json).ToList();
+                if (ids.Any(id => _trackedActorIds.Contains(id)))
+                {
+                    _isDirty = true;
+                    ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage?.Invoke(this, $"Error processing nameChanged event: {ex.Message}");
+            }
+        }
+
+        // Handler for postDeleted: mark dirty only if deleted object is a tracked actor or a parent of a tracked actor.
+        private void OnObjectsPostDeleted(JObject json)
+        {
+            try
+            {
+                var ids = GetIdsFromPublish(json).ToList();
+                if (ids.Any(id => _trackedActorIds.Contains(id) || _trackedParentIds.Contains(id)))
+                {
+                    _isDirty = true;
+                    ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage?.Invoke(this, $"Error processing postDeleted event: {ex.Message}");
+            }
+        }
+
+        // Attempt to extract object id(s) from a publish message in a resilient way.
+        private IEnumerable<string> GetIdsFromPublish(JObject json)
+        {
+            if (json == null) yield break;
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            void InspectToken(JToken token)
+            {
+                if (token == null) return;
+
+                switch (token.Type)
+                {
+                    case JTokenType.String:
+                    case JTokenType.Guid:
+                        var s = token.ToString();
+                        if (!string.IsNullOrWhiteSpace(s)) seen.Add(s);
+                        break;
+
+                    case JTokenType.Object:
+                        // Prefer explicit "id" property
+                        var idProp = token["id"];
+                        if (idProp != null && (idProp.Type == JTokenType.String || idProp.Type == JTokenType.Guid))
+                        {
+                            seen.Add(idProp.ToString());
+                        }
+                        else
+                        {
+                            // Recursively collect any nested "id" properties
+                            foreach (var t in token.SelectTokens("$..id"))
+                            {
+                                if (t != null && (t.Type == JTokenType.String || t.Type == JTokenType.Guid))
+                                    seen.Add(t.ToString());
+                            }
+                        }
+                        break;
+
+                    case JTokenType.Array:
+                        foreach (var child in token as JArray)
+                            InspectToken(child);
+                        break;
+
+                    default:
+                        // No-op for other token types
+                        break;
+                }
+            }
+
+            // Inspect common WAAPI publish shapes explicitly
+            InspectToken(json["object"]);
+            InspectToken(json["objects"]);
+            InspectToken(json["ids"]);
+            InspectToken(json["id"]);
+            InspectToken(json[ReturnKey]);
+
+            // Fallback: find any property named "id" anywhere in the payload
+            foreach (var idToken in json.SelectTokens("$..id"))
+            {
+                if (idToken != null && (idToken.Type == JTokenType.String || idToken.Type == JTokenType.Guid))
+                    seen.Add(idToken.ToString());
+            }
+
+            foreach (var id in seen)
+                yield return id;
         }
 
         public async Task UnsubscribeFromChangesAsync()
@@ -59,6 +172,10 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 await _client.Unsubscribe(id);
             }
             _subscriptionIds.Clear();
+
+            // clear tracked ids so future publishes are ignored until next SubscribeToChangesAsync
+            _trackedActorIds.Clear();
+            _trackedParentIds.Clear();
         }
 
         public ActormixerSanitizerService()
@@ -69,6 +186,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public void Disconnect()
         {
+            _subscriptionIds.Clear();
             _client.Disconnect();
         }
 

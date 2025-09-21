@@ -115,12 +115,16 @@ public class MainViewModel : INotifyPropertyChanged
         IsDirty = false;
         try
         {
+            var selectedIds = SelectedActors.Select(a => a.Id).ToHashSet();
             var actors = await _service.GetSanitizableMixersAsync();
             await _service.SubscribeToChangesAsync(actors);
             ActorMixers.Clear();
             foreach (var actor in actors)
             {
-                actor.IsSelected = actor.IsSelected;
+                if (selectedIds.Contains(actor.Id))
+                {
+                    actor.IsSelected = true;
+                }
                 ActorMixers.Add(actor);
             }
             AddLog($"Found {actors.Count} actor mixers that can be converted");
