@@ -119,7 +119,9 @@ public class ak
 			}
 			/// <summary>Retrieve global Wwise information.</summary>
 			public const string getInfo = "ak.wwise.core.getInfo";
-			public class @object
+            /// <summary>Undoes the last operation in the Undo stack.</summary>
+            public const string getProjectInfo = "ak.wwise.core.getProjectInfo";
+            public class @object
 			{
 				/// <summary>Sent when an object reference is changed.</summary>
 				public const string referenceChanged = "ak.wwise.core.object.referenceChanged";
@@ -190,7 +192,9 @@ public class ak
 				public const string cancelGroup = "ak.wwise.core.undo.cancelGroup";
 				/// <summary>Begins an undo group. Make sure to call \ref ak_wwise_core_undo_endgroup exactly once for every ak.wwise.core.beginUndoGroup call you make. Calls to ak.wwise.core.undo.beginGroup can be nested.</summary>
 				public const string beginGroup = "ak.wwise.core.undo.beginGroup";
-			}
+                /// <summary>Undoes the last operation in the Undo stack.</summary>
+                public const string undoLast = "ak.wwise.core.undo.undo";
+            }
 			public class profiler
 			{
 				/// <summary>Specifies the type of data you want to capture. Overrides the user's profiler settings.</summary>

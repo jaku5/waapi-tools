@@ -41,6 +41,13 @@
 				<Style TargetType="ListBoxItem">
 					<!-- Keep ListBox selection and the item's IsSelected property synchronized 
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/> -->
+					<!-- TODO: Errors in calls -->
+					<!-- TODO: Mem leak -->
+					<!-- TODO: Refactor logging -->
+					<!-- TODO: New state check for 2024+ -->
+					<!-- TODO: Add Tests -->
+					<!-- TODO: Icons and shipit -->
+					
 					<!-- Double-click will toggle the checkmark -->
 					<EventSetter Event="MouseDoubleClick" Handler="ListBoxItem_MouseDoubleClick"/>
 

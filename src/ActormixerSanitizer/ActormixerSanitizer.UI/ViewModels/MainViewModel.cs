@@ -117,7 +117,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             var selectedIds = SelectedActors.Select(a => a.Id).ToHashSet();
             var actors = await _service.GetSanitizableMixersAsync();
-            await _service.SubscribeToChangesAsync(actors);
+            await _service.SubscribeToChangesAsync();
             ActorMixers.Clear();
             foreach (var actor in actors)
             {
@@ -180,9 +180,11 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConvertAsync()
     {
+        await _service.CheckProjectStateAsync();
+
         if (IsDirty)
         {
-            AddLog("Project has changed, please scan again before converting.");
+            //AddLog("Project has changed, please scan again before converting.");
             return;
         }
 
@@ -228,7 +230,7 @@ public class MainViewModel : INotifyPropertyChanged
     private void OnProjectStateChanged(object sender, EventArgs e)
     {
         IsDirty = true;
-        AddLog("Wwise project has changed. Please re-scan.");
+        //AddLog("Wwise project has changed. Please re-scan.");
     }
 
     private void AddLog(string message)
@@ -253,7 +255,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (!selectedActors.Any())
         {
-            AddLog("No selected actors tho show");
+            AddLog("No selected actors to show");
             return;
         }
 
