@@ -5,6 +5,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.Arm;
+using System.Security.Policy;
 using System.Windows;
 using System.Windows.Input;
 
@@ -68,6 +70,17 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isSaved;
+    public bool IsSaved     
+    {
+        get => _isSaved;
+        set
+        {
+            _isSaved = value;
+            OnPropertyChanged();
+        }
+    }
+
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
     public MainViewModel()
@@ -113,6 +126,8 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task ScanAsync()
     {
         IsDirty = false;
+        _service.IsSaved = false;
+
         try
         {
             var selectedIds = SelectedActors.Select(a => a.Id).ToHashSet();
@@ -180,11 +195,23 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConvertAsync()
     {
-        await _service.CheckProjectStateAsync();
+        try
+        {
+            await _service.CheckProjectStateAsync();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Error checking project state: {ex.Message}");
+            return;
+        }
 
         if (IsDirty)
         {
-            //AddLog("Project has changed, please scan again before converting.");
+            return;
+        }
+        if (IsSaved)
+        {
+           AddLog("Project has saved changes since last scan. Please rescan.");
             return;
         }
 
@@ -229,7 +256,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnProjectStateChanged(object sender, EventArgs e)
     {
-        IsDirty = true;
+        IsDirty = _service.IsDirty;
+        IsSaved = _service.IsSaved;
         //AddLog("Wwise project has changed. Please re-scan.");
     }
 

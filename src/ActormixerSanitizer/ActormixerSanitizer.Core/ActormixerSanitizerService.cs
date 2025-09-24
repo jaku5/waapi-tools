@@ -20,7 +20,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public event EventHandler Disconnected;
         public event EventHandler ProjectStateChanged;
 
-        private bool _isDirty = false;
+        public bool IsDirty = false;
+        public bool IsSaved = false;
         private List<int> _subscriptionIds = new List<int>();
 
         public async Task SubscribeToChangesAsync()
@@ -36,7 +37,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         {
             try
             {
-                _isDirty = true;
+                IsDirty = true;
+                IsSaved = true;
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                 LogMessage?.Invoke(this, $"Project has been saved. Please rescan.");
             }
@@ -108,11 +110,19 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             try
             {
                 var projectInfo = await _client.Call(ak.wwise.@core.getProjectInfo);
+
                 if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == true)
                 {
-                    _isDirty = true;
+                    IsDirty = true;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                    LogMessage?.Invoke(this, $"Project changes detected. Please save the project and rescan.");
+                    LogMessage?.Invoke(this, $"Project changes detected. Please save the project and rescan or undo the changes.");
+                    return;
+                }
+
+                else if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == false)
+                {
+                    IsDirty = false;
+                    ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
             }
