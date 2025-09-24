@@ -3,10 +3,7 @@ using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
-using System.Security.Policy;
 using System.Windows;
 using System.Windows.Input;
 
@@ -71,7 +68,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private bool _isSaved;
-    public bool IsSaved     
+    public bool IsSaved
     {
         get => _isSaved;
         set
@@ -80,7 +77,6 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
-
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
     public MainViewModel()
@@ -125,8 +121,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ScanAsync()
     {
-        IsDirty = false;
-        _service.IsSaved = false;
+        //IsDirty = false;
+        //IsSaved = false;
 
         try
         {
@@ -195,6 +191,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ConvertAsync()
     {
+        if (IsSaved)
+        {
+            AddLog("Project has been saved since the last scan. Please scan again before converting.");
+            return;
+        }
+
         try
         {
             await _service.CheckProjectStateAsync();
@@ -209,11 +211,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             return;
         }
-        if (IsSaved)
-        {
-           AddLog("Project has saved changes since last scan. Please rescan.");
-            return;
-        }
 
         var selectedActors = SelectedActors.ToList();
 
@@ -226,7 +223,7 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             await _service.ConvertToFoldersAsync(selectedActors);
-            await ScanAsync(); // Refresh the list
+            await ScanAsync();
         }
         catch (Exception ex)
         {
@@ -258,7 +255,6 @@ public class MainViewModel : INotifyPropertyChanged
     {
         IsDirty = _service.IsDirty;
         IsSaved = _service.IsSaved;
-        //AddLog("Wwise project has changed. Please re-scan.");
     }
 
     private void AddLog(string message)

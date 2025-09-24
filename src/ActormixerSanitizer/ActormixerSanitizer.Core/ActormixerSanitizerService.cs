@@ -1,9 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using JPAudio.WaapiTools.ClientJson;
-using System.Collections.Generic;
 
 namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 {
@@ -20,15 +16,26 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public event EventHandler Disconnected;
         public event EventHandler ProjectStateChanged;
 
-        public bool IsDirty = false;
-        public bool IsSaved = false;
+        private bool _isDirty = false;
+        private bool _isSaved = false;
+        public bool IsSaved
+        {
+            get => _isSaved;
+            private set => _isSaved = value;
+        }
+
+        public bool IsDirty
+        {
+            get => _isDirty;
+            private set => _isDirty = value;
+        }
+
         private List<int> _subscriptionIds = new List<int>();
 
         public async Task SubscribeToChangesAsync()
         {
             await UnsubscribeFromChangesAsync();
 
-            // Only subscribe to project saved. Mark service dirty on that event.
             var projectSavedId = await _client.Subscribe(ak.wwise.core.project.saved, null, OnProjectSaved);
             _subscriptionIds.Add(projectSavedId);
         }
@@ -37,7 +44,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         {
             try
             {
-                IsDirty = true;
                 IsSaved = true;
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                 LogMessage?.Invoke(this, $"Project has been saved. Please rescan.");
@@ -76,6 +82,10 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync()
         {
+            _isSaved = false;
+
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
             var actorQuery = BuildQueryStrings(ActorCandidatesQuery, _unityProperties);
@@ -89,7 +99,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
                 new JProperty("displayName", "Create and remove temp query")));
-                
+
             await _client.Call(ak.wwise.core.undo.undoLast);
 
             return processedActors.Select(a => new ActorMixerInfo
@@ -307,7 +317,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
                 // Delete the temporary query
                 await client.Call(ak.wwise.core.@object.delete, new JObject(
-                                    new JProperty("object", stateQuery["id"].ToString()))); 
+                                    new JProperty("object", stateQuery["id"].ToString())));
             }
         }
 
