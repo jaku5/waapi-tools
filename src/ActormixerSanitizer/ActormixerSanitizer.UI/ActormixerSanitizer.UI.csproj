@@ -1,23 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWPF>true</UseWPF>
+		<NoWarn>$(NoWarn);WPF0001</NoWarn>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ActormixerSanitizer.Core\ActormixerSanitizer.Core.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ActormixerSanitizer.Core\ActormixerSanitizer.Core.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
-  </ItemGroup>
+	<ItemGroup>
+		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
+		<Resource Include="..\..\Resources\ic_fluent_folder_arrow_right_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_folder_arrow_right_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_folder_prohibited_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_folder_prohibited_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_multiselect_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_multiselect_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_filled_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_filled.png" />
+		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_filled_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_filled.png" />
+		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_select_all_off_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_select_all_off_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_select_all_on_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_select_all_on_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_text_bullet_list_square_24_regular_light.png" />
+		<Resource Include="..\..\Resources\ic_fluent_text_bullet_list_square_24_regular.png" />
+	</ItemGroup>
 
 </Project>

@@ -19,6 +19,7 @@ namespace ActormixerSanitizer.UI
         public MainWindow()
         {
             InitializeComponent();
+            Application.Current.ThemeMode = ThemeMode.System;
         }
 
         private void ListBoxItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
