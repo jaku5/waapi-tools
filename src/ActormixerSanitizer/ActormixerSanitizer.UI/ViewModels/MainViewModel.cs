@@ -25,6 +25,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CopyPathCommand { get; }
     public ICommand SelectInWwiseCommand { get; }
     public ICommand ShowSelectedListCommand { get; }
+    public ICommand ThemeChangeCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
@@ -101,6 +102,7 @@ public class MainViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(SelectNoneIcon));
                 OnPropertyChanged(nameof(ToggleSelectedIcon));
                 OnPropertyChanged(nameof(ShowSelectedListIcon));
+                OnPropertyChanged(nameof(ThemeIcon));
             }
         }
     }
@@ -112,6 +114,7 @@ public class MainViewModel : INotifyPropertyChanged
     public string SelectNoneIcon => _isDarkTheme ? "ic_fluent_select_all_off_24_regular_light.png" : "ic_fluent_select_all_off_24_regular.png";
     public string ToggleSelectedIcon => _isDarkTheme ? "ic_fluent_multiselect_24_regular_light.png" : "ic_fluent_multiselect_24_regular.png";
     public string ShowSelectedListIcon => _isDarkTheme ? "ic_fluent_text_bullet_list_square_24_regular_light.png" : "ic_fluent_text_bullet_list_square_24_regular.png";
+    public string ThemeIcon => _isDarkTheme ? "ic_fluent_weather_moon_24_regular_light.png" : "ic_fluent_weather_sunny_24_regular.png";
 
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
@@ -137,6 +140,7 @@ public class MainViewModel : INotifyPropertyChanged
         CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
         ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
+        ThemeChangeCommand = new RelayCommand(ThemeChange);
 
         _ = ConnectAsync();
     }
@@ -172,6 +176,12 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         return false; // Default to Light if the key or value doesn't exist
+    }
+
+    private void ThemeChange()
+    {
+        IsDarkTheme = !IsDarkTheme;
+        Application.Current.ThemeMode = IsDarkTheme ? ThemeMode.Dark : ThemeMode.Light;
     }
 
     private async Task ConnectAsync()

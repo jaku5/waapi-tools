@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Actormixer Sanitizer" Height="450" Width="800"
         Closing="MainWindow_Closing">
-        <!-- ThemeMode="Light" -->
     <Window.Resources>
 		<Style x:Key="GraphicToCheckboxStyle" TargetType="{x:Type ToggleButton}">
 			<Setter Property="Template">
@@ -83,6 +82,12 @@
 				HorizontalAlignment="Right"
 				ToolTip="Convert Selected to Folders">
 				<Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
+			</Button>
+			<Button Grid.Row="4" Command="{Binding ThemeChangeCommand}"
+				Width="60" Margin="0,0,10,0"
+				HorizontalAlignment="Right"
+				ToolTip="Change app theme">
+				<Image Source="{Binding ThemeIcon}" Width="32" Height="32"/>
 			</Button>
 		</StackPanel>
 		<!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->

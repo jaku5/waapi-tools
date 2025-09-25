@@ -39,6 +39,8 @@
 		<Resource Include="..\..\Resources\ic_fluent_select_all_on_24_regular.png" />
 		<Resource Include="..\..\Resources\ic_fluent_text_bullet_list_square_24_regular_light.png" />
 		<Resource Include="..\..\Resources\ic_fluent_text_bullet_list_square_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_weather_sunny_24_regular.png" />
+		<Resource Include="..\..\Resources\ic_fluent_weather_moon_24_regular_light.png" />
 	</ItemGroup>
 
 </Project>
