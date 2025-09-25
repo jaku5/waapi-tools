@@ -45,51 +45,75 @@
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 
-		<StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-			<Button Command="{Binding ConnectCommand}"
+		<Grid Grid.Row="0" Margin="0,0,0,10">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+
+			<Button Grid.Column="0" Command="{Binding ConnectCommand}"
 					Width="60" Margin="0,0,10,0" IsEnabled="{Binding IsNotConnected}"
 					ToolTip="Connect">
 				<Image Source="{Binding ConnectIcon}" Width="32" Height="32" />
 			</Button>
-			<Button Command="{Binding ScanCommand}"
+
+			<Grid Grid.Column="1">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+
+				<Button Grid.Column="1" Command="{Binding ScanCommand}"
+						Width="60" Margin="0,0,10,0"
+						ToolTip="Scan">
+					<Image Source="{Binding ScanIcon}" Width="32" Height="32" />
+				</Button>
+
+				<StackPanel Grid.Column="3" Orientation="Horizontal">
+					<Button Command="{Binding SelectAllCommand}"
+							Width="60" Margin="0,0,10,0"
+							ToolTip="Select All">
+						<Image Source="{Binding SelectAllIcon}" Width="32" Height="32" />
+					</Button>
+					<Button Command="{Binding SelectNoneCommand}"
+							Width="60" Margin="0,0,10,0"
+							ToolTip="Select None">
+						<Image Source="{Binding SelectNoneIcon}" Width="32" Height="32" />
+					</Button>
+					<Button Command="{Binding ToggleSelectedCommand}"
+							CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItems}"
+							Width="60" Margin="0,0,10,0"
+							ToolTip="Toggle Selected">
+						<Image Source="{Binding ToggleSelectedIcon}" Width="32" Height="32" />
+					</Button>
+				</StackPanel>
+
+				<StackPanel Grid.Column="5" Orientation="Horizontal">
+					<Button Command="{Binding ShowSelectedListCommand}"
+							Width="60" Margin="0,0,10,0"
+							ToolTip="Show Selected List">
+						<Image Source="{Binding ShowSelectedListIcon}" Width="32" Height="32" />
+					</Button>
+					<Button Command="{Binding ConvertCommand}"
+							Width="60" Margin="0,0,10,0"
+							ToolTip="Convert Selected to Folders">
+						<Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
+					</Button>
+				</StackPanel>
+			</Grid>
+
+			<Button Grid.Column="2" Command="{Binding ThemeChangeCommand}"
 					Width="60" Margin="0,0,10,0"
-					ToolTip="Scan">
-				<Image Source="{Binding ScanIcon}" Width="32" Height="32" />
-			</Button>
-			<Button Command="{Binding SelectAllCommand}"
-					Width="60" Margin="0,0,10,0"
-					ToolTip="Select All">
-				<Image Source="{Binding SelectAllIcon}" Width="32" Height="32" />
-			</Button>
-			<Button Command="{Binding SelectNoneCommand}"
-					Width="60" Margin="0,0,10,0"
-					ToolTip="Select None">
-				<Image Source="{Binding SelectNoneIcon}" Width="32" Height="32" />
-			</Button>
-			<Button Command="{Binding ToggleSelectedCommand}"
-					CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItems}"
-					Width="60" Margin="0,0,10,0"
-					ToolTip="Toggle Selected">
-				<Image Source="{Binding ToggleSelectedIcon}" Width="32" Height="32" />
-			</Button>
-			<Button Command="{Binding ShowSelectedListCommand}"
-					Width="60" Margin="0,0,10,0"
-					ToolTip="Show Selected List">
-				<Image Source="{Binding ShowSelectedListIcon}" Width="32" Height="32" />
-			</Button>
-			<Button Grid.Row="4" Command="{Binding ConvertCommand}"
-				Width="60" Margin="0,0,10,0"
-				HorizontalAlignment="Right"
-				ToolTip="Convert Selected to Folders">
-				<Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
-			</Button>
-			<Button Grid.Row="4" Command="{Binding ThemeChangeCommand}"
-				Width="60" Margin="0,0,10,0"
-				HorizontalAlignment="Right"
-				ToolTip="Change app theme">
+					ToolTip="Change app theme">
 				<Image Source="{Binding ThemeIcon}" Width="32" Height="32"/>
 			</Button>
-		</StackPanel>
+		</Grid>
 		<!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
 		<ListBox Grid.Row="1"
                  Name="ActorMixerListBox"
