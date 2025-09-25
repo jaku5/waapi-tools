@@ -16,4 +16,8 @@
     <ProjectReference Include="..\ActormixerSanitizer.Core\ActormixerSanitizer.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
+  </ItemGroup>
+
 </Project>

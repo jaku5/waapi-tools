@@ -4,6 +4,39 @@
         Title="Actormixer Sanitizer" Height="450" Width="800"
         ThemeMode="System"
         Closing="MainWindow_Closing">
+	<Window.Resources>
+		<Style x:Key="GraphicToCheckboxStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Grid Background="Transparent" Width="28" Height="21"
+                              VerticalAlignment="Center" HorizontalAlignment="Center">
+
+							<!-- The visual for the CHECKED state: a default CheckBox -->
+							<CheckBox x:Name="CheckedVisual"
+                                      IsChecked="True"
+                                      IsHitTestVisible="False"
+                                      Visibility="Collapsed"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"/>
+
+							<!-- The visual for the UNCHECKED state: the image -->
+							<Image x:Name="UncheckedVisual"
+                                   Source="ObjectIcons_ActorMixer_nor.png"
+								   HorizontalAlignment="Left"
+                                   Visibility="Visible"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="CheckedVisual" Property="Visibility" Value="Visible" />
+								<Setter TargetName="UncheckedVisual" Property="Visibility" Value="Collapsed" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</Window.Resources>
 	<Grid Margin="10">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -47,7 +80,7 @@
 					<!-- TODO: New state check for 2024+ -->
 					<!-- TODO: Add Tests -->
 					<!-- TODO: Icons and shipit -->
-					
+
 					<!-- Double-click will toggle the checkmark -->
 					<EventSetter Event="MouseDoubleClick" Handler="ListBoxItem_MouseDoubleClick"/>
 
@@ -71,10 +104,10 @@
 				<DataTemplate>
 					<Border Padding="2" Margin="2" BorderBrush="LightGray" BorderThickness="0,0,0,0">
 						<DockPanel>
-							<CheckBox DockPanel.Dock="Left"
-                                      VerticalAlignment="Center"
-                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                      Margin="0,0,2,0"/>
+							<ToggleButton DockPanel.Dock="Left"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          Margin="0,0,0,0"
+                                          Style="{StaticResource GraphicToCheckboxStyle}"/>
 							<StackPanel>
 								<TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
 								<TextBlock Text="{Binding Path}" FontSize="12" Foreground="Gray"/>
