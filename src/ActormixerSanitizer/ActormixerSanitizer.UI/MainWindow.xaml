@@ -48,17 +48,18 @@
 		<Grid Grid.Row="0" Margin="0,0,0,10">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto" />
-				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
 				<ColumnDefinition Width="Auto" />
 			</Grid.ColumnDefinitions>
 
-			<Button Grid.Column="0" Command="{Binding ConnectCommand}"
-					Width="60" Margin="0,0,10,0" IsEnabled="{Binding IsNotConnected}"
+            <Button Grid.Column="0" Command="{Binding ConnectCommand}"
+					Width="60" Margin="0,0,0,0" IsEnabled="{Binding IsNotConnected}"
 					ToolTip="Connect">
-				<Image Source="{Binding ConnectIcon}" Width="32" Height="32" />
-			</Button>
+                <Image Source="{Binding ConnectIcon}" Width="32" Height="32" />
+            </Button>
 
-			<Grid Grid.Column="1">
+            <Grid Grid.Column="1">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" />
@@ -68,13 +69,13 @@
 					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="*" />
 				</Grid.ColumnDefinitions>
-
-				<Button Grid.Column="1" Command="{Binding ScanCommand}"
-						Width="60" Margin="0,0,10,0"
+                <Separator Grid.Column="0" Margin="10,0,10,0"/>
+                <Button Grid.Column="1" Command="{Binding ScanCommand}"
+						Width="60" Margin="0,0,0,0"
 						ToolTip="Scan">
 					<Image Source="{Binding ScanIcon}" Width="32" Height="32" />
 				</Button>
-
+                <Separator Grid.Column="2" Margin="10,0,10,0"/>
 				<StackPanel Grid.Column="3" Orientation="Horizontal">
 					<Button Command="{Binding SelectAllCommand}"
 							Width="60" Margin="0,0,10,0"
@@ -86,96 +87,96 @@
 							ToolTip="Select None">
 						<Image Source="{Binding SelectNoneIcon}" Width="32" Height="32" />
 					</Button>
-					<Button Command="{Binding ToggleSelectedCommand}"
+                    <Button Command="{Binding ToggleSelectedCommand}"
 							CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItems}"
-							Width="60" Margin="0,0,10,0"
+							Width="60" Margin="0,0,0,0"
 							ToolTip="Toggle Selected">
-						<Image Source="{Binding ToggleSelectedIcon}" Width="32" Height="32" />
-					</Button>
-				</StackPanel>
-
-				<StackPanel Grid.Column="5" Orientation="Horizontal">
-					<Button Command="{Binding ShowSelectedListCommand}"
+                        <Image Source="{Binding ToggleSelectedIcon}" Width="32" Height="32" />
+                    </Button>
+                </StackPanel>
+                <Separator Grid.Column="4"  Margin="10,0,10,0"/>
+                <Button Grid.Column="5" Command="{Binding ShowSelectedListCommand}"
 							Width="60" Margin="0,0,10,0"
 							ToolTip="Show Selected List">
-						<Image Source="{Binding ShowSelectedListIcon}" Width="32" Height="32" />
-					</Button>
-					<Button Command="{Binding ConvertCommand}"
-							Width="60" Margin="0,0,10,0"
-							ToolTip="Convert Selected to Folders">
-						<Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
-					</Button>
-				</StackPanel>
-			</Grid>
+                    <Image Source="{Binding ShowSelectedListIcon}" Width="32" Height="32" />
+                </Button>
+            </Grid>
 
-			<Button Grid.Column="2" Command="{Binding ThemeChangeCommand}"
-					Width="60" Margin="0,0,10,0"
+			<Button Grid.Column="3" Command="{Binding ThemeChangeCommand}"
+					Width="45" Height ="35" Margin="0,0,0,0"
+                    VerticalAlignment="Top"
 					ToolTip="Change app theme">
-				<Image Source="{Binding ThemeIcon}" Width="32" Height="32"/>
+				<Image Source="{Binding ThemeIcon}" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 			</Button>
 		</Grid>
 		<!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
-		<ListBox Grid.Row="1"
+        <ListBox Grid.Row="1"
                  Name="ActorMixerListBox"
                  ItemsSource="{Binding ActorMixers}"
                  SelectionMode="Extended"
                  HorizontalContentAlignment="Stretch"
                  BorderThickness="0"
                  Background="Transparent">
-			<ListBox.ItemContainerStyle>
-				<Style TargetType="ListBoxItem">
-					<!-- Keep ListBox selection and the item's IsSelected property synchronized 
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <!-- Keep ListBox selection and the item's IsSelected property synchronized 
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/> -->
-					<!-- TODO: Errors in calls -->
-					<!-- TODO: Mem leak -->
-					<!-- TODO: Refactor logging -->
-					<!-- TODO: New state check for 2024+ -->
-					<!-- TODO: Add Tests -->
-					<!-- TODO: Icons and shipit -->
+                    <!-- TODO: Errors in calls -->
+                    <!-- TODO: Mem leak -->
+                    <!-- TODO: Refactor logging -->
+                    <!-- TODO: New state check for 2024+ -->
+                    <!-- TODO: Add Tests -->
+                    <!-- TODO: Icons and shipit -->
                     <!-- TODO: Get info on Connect. Subscribe for additional topics and undo -->
 
                     <!-- Double-click will toggle the checkmark -->
-					<EventSetter Event="MouseDoubleClick" Handler="ListBoxItem_MouseDoubleClick"/>
+                    <EventSetter Event="MouseDoubleClick" Handler="ListBoxItem_MouseDoubleClick"/>
 
-					<Setter Property="Tag" Value="{Binding DataContext, ElementName=ActorMixerListBox}"/>
-					<Setter Property="ContextMenu">
-						<Setter.Value>
-							<ContextMenu>
-								<MenuItem Header="{Binding Name}" IsEnabled="False"/>
-								<Separator/>
-								<MenuItem Header="Copy name" Command="{Binding PlacementTarget.Tag.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-								<MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-								<MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-								<MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-							</ContextMenu>
-						</Setter.Value>
-					</Setter>
-				</Style>
-			</ListBox.ItemContainerStyle>
+                    <Setter Property="Tag" Value="{Binding DataContext, ElementName=ActorMixerListBox}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="{Binding Name}" IsEnabled="False"/>
+                                <Separator/>
+                                <MenuItem Header="Copy name" Command="{Binding PlacementTarget.Tag.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
 
-			<ListBox.ItemTemplate>
-				<DataTemplate>
-					<Border Padding="2" Margin="2" BorderBrush="LightGray" BorderThickness="0,0,0,0">
-						<DockPanel>
-							<ToggleButton DockPanel.Dock="Left"
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="2" Margin="2" BorderBrush="LightGray" BorderThickness="0,0,0,0">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Left"
                                           IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                           Margin="0,0,0,0"
                                           Style="{StaticResource GraphicToCheckboxStyle}"/>
-							<StackPanel>
-								<TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-								<TextBlock Text="{Binding Path}" FontSize="12" Foreground="Gray"/>
-							</StackPanel>
-						</DockPanel>
-					</Border>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Path}" FontSize="12" Foreground="Gray"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
 
-		</ListBox>
+        </ListBox>
 
-		<GridSplitter Grid.Row="2" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>
+        <GridSplitter Grid.Row="2" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>
 
 		<TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}"
                  IsReadOnly="True" TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"/>
-	</Grid>
+
+        <Button Grid.Row="4" Command="{Binding ConvertCommand}"
+			Height="45" HorizontalAlignment="Stretch" Margin="0,0,10,0"
+			ToolTip="Convert Selected to Folders">
+            <Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
+        </Button>
+    </Grid>
 </Window>
