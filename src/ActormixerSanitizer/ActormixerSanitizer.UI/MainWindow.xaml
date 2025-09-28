@@ -174,7 +174,7 @@
                  VerticalScrollBarVisibility="Auto"/>
 
         <Button Grid.Row="4" Command="{Binding ConvertCommand}"
-			Height="45" HorizontalAlignment="Stretch" Margin="0,0,10,0"
+			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
 			ToolTip="Convert Selected to Folders">
             <Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
         </Button>

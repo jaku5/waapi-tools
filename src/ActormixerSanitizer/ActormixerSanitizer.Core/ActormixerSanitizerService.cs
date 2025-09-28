@@ -11,6 +11,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         private const string ObjectGetUri = ak.wwise.core.@object.get;
         private const string ActorCandidatesQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")";
         private readonly static List<string> _unityProperties = new List<string> { "Volume", "Pitch", "Lowpass", "Highpass", "MakeUpGain" };
+        private readonly static List<string> _wwiseCommands = new List<string> { "Undo", "Redo" };
 
         public event EventHandler<string> LogMessage;
         public event EventHandler Disconnected;
@@ -18,16 +19,37 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         private bool _isDirty = false;
         private bool _isSaved = false;
+        private bool _isConverted = false;
+        private bool _isConnectionLost = false;
+        private bool _isScanned = false;
+
+        public bool IsDirty
+        {
+            get => _isDirty;
+            private set => _isDirty = value;
+        }
+
         public bool IsSaved
         {
             get => _isSaved;
             private set => _isSaved = value;
         }
 
-        public bool IsDirty
+        public bool IsConverted
         {
-            get => _isDirty;
-            private set => _isDirty = value;
+            get => _isConverted;
+            private set => _isConverted = value;
+        }
+        public bool IsConnectionLost
+        {
+            get => _isConnectionLost;
+            private set => _isConnectionLost = value;
+        }
+
+        public bool IsScanned
+        {
+            get => _isScanned;
+            private protected set => _isScanned = value;
         }
 
         private List<int> _subscriptionIds = new List<int>();
@@ -37,20 +59,50 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             await UnsubscribeFromChangesAsync();
 
             var projectSavedId = await _client.Subscribe(ak.wwise.core.project.saved, null, OnProjectSaved);
+            var commandExecutedId = await _client.Subscribe(ak.wwise.ui.commands.executed, null, OnCommandExecuted);
+            var nameChangedId = await _client.Subscribe(ak.wwise.core.@object.nameChanged, null, OnObjectChanged);
+            var createdId = await _client.Subscribe(ak.wwise.core.@object.created, null, OnObjectChanged);
+            var postDeletedId = await _client.Subscribe(ak.wwise.core.@object.postDeleted, null, OnObjectChanged);
+            var referenceChangedId = await _client.Subscribe(ak.wwise.core.@object.referenceChanged, null, OnObjectChanged);
+
             _subscriptionIds.Add(projectSavedId);
+            _subscriptionIds.Add(commandExecutedId);
+            _subscriptionIds.Add(nameChangedId);
+            _subscriptionIds.Add(createdId);
+            _subscriptionIds.Add(postDeletedId);
+            _subscriptionIds.Add(referenceChangedId);
         }
 
         private void OnProjectSaved(JObject json)
         {
             try
             {
-                IsSaved = true;
+                _isSaved = true;
+                _isDirty = false;
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                 LogMessage?.Invoke(this, $"Project has been saved. Please rescan.");
             }
             catch (Exception ex)
             {
                 LogMessage?.Invoke(this, $"Error processing project.saved event: {ex.Message}");
+            }
+        }
+
+        private async void OnCommandExecuted(JObject json)
+        {
+            if (_wwiseCommands.Contains(json["command"].ToString()))
+            {
+                await CheckProjectStateAsync();
+            }
+        }
+
+        private void OnObjectChanged(JObject json)
+        {
+            if (!_isDirty)
+            {
+                _isDirty = true;
+                ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+                LogMessage?.Invoke(this, $"Project changes detected. Please save the project and rescan or undo the changes.");
             }
         }
 
@@ -71,6 +123,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public void Disconnect()
         {
+            _isConnectionLost = true;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+
             _subscriptionIds.Clear();
             _client.Disconnect();
         }
@@ -78,13 +133,23 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public async Task ConnectAsync()
         {
             await _client.Connect();
+
+            _isScanned = false;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync()
         {
             _isSaved = false;
+            //_isDirty = false;
+            _isConverted = false;
+            _isScanned = true;
+            _isConnectionLost = false;
+
+            await CheckProjectStateAsync();
 
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+            await UnsubscribeFromChangesAsync();
 
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
@@ -101,6 +166,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 new JProperty("displayName", "Create and remove temp query")));
 
             await _client.Call(ak.wwise.core.undo.undoLast);
+
+            await SubscribeToChangesAsync();
 
             return processedActors.Select(a => new ActorMixerInfo
             {
@@ -123,7 +190,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
                 if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == true)
                 {
-                    IsDirty = true;
+                    _isDirty = true;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                     LogMessage?.Invoke(this, $"Project changes detected. Please save the project and rescan or undo the changes.");
                     return;
@@ -131,7 +198,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
                 else if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == false)
                 {
-                    IsDirty = false;
+                    _isDirty = false;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
@@ -183,6 +250,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
                 new JProperty("displayName", "Sanitize Actor-Mixers")));
+
+            _isConverted = true;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)

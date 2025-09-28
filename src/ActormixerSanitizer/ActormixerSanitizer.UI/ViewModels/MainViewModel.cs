@@ -85,6 +85,45 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isConverted;
+    public bool IsConverted
+    { 
+        get => _isConverted; 
+        set
+        {
+            _isConverted = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ScanIcon));
+            OnPropertyChanged(nameof(ConvertIcon));
+        }
+    }
+
+    private bool _isConnectionLost = false;
+    public bool IsConnectionLost
+    {
+        get => _isConnectionLost;
+        set
+        {
+            _isConnectionLost = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ScanIcon));
+            OnPropertyChanged(nameof(ConvertIcon));
+        }
+    }
+
+    private bool _isScanned;
+    public bool IsScanned
+    {
+        get => _isScanned;
+        set
+        {
+            _isScanned = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ScanIcon));
+            OnPropertyChanged(nameof(ConvertIcon));
+        }
+    }
+
     public static bool _isDarkTheme = false;
     public bool IsDarkTheme
     {
@@ -108,8 +147,8 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     public string ConnectIcon => !IsNotConnected ? (_isDarkTheme ? "ic_fluent_plug_disconnected_24_filled_light.png" : "ic_fluent_plug_disconnected_24_filled.png") : (_isDarkTheme ? "ic_fluent_plug_disconnected_24_regular_light.png" : "ic_fluent_plug_disconnected_24_regular.png");
-    public string ScanIcon => (IsDirty || IsSaved) ? (_isDarkTheme ? "ic_fluent_scan_table_24_filled_light.png" : "ic_fluent_scan_table_24_filled.png") : (_isDarkTheme ? "ic_fluent_scan_table_24_regular_light.png" : "ic_fluent_scan_table_24_regular.png");
-    public string ConvertIcon => (IsDirty || IsSaved) ? (_isDarkTheme ? "ic_fluent_folder_prohibited_24_regular_light.png" : "ic_fluent_folder_prohibited_24_regular.png") : (_isDarkTheme ? "ic_fluent_folder_arrow_right_24_regular_light.png" : "ic_fluent_folder_arrow_right_24_regular.png");
+    public string ScanIcon => (IsDirty || IsSaved || IsConverted || IsConnectionLost) ? (_isDarkTheme ? "ic_fluent_scan_table_24_filled_light.png" : "ic_fluent_scan_table_24_filled.png") : (_isDarkTheme ? "ic_fluent_scan_table_24_regular_light.png" : "ic_fluent_scan_table_24_regular.png");
+    public string ConvertIcon => (IsDirty || IsSaved || IsConverted || IsConnectionLost) ? (_isDarkTheme ? "ic_fluent_folder_prohibited_24_regular_light.png" : "ic_fluent_folder_prohibited_24_regular.png") : (_isDarkTheme ? "ic_fluent_folder_arrow_right_24_regular_light.png" : "ic_fluent_folder_arrow_right_24_regular.png");
     public string SelectAllIcon => _isDarkTheme ? "ic_fluent_select_all_on_24_regular_light.png" : "ic_fluent_select_all_on_24_regular.png";
     public string SelectNoneIcon => _isDarkTheme ? "ic_fluent_select_all_off_24_regular_light.png" : "ic_fluent_select_all_off_24_regular.png";
     public string ToggleSelectedIcon => _isDarkTheme ? "ic_fluent_multiselect_24_regular_light.png" : "ic_fluent_multiselect_24_regular.png";
@@ -202,15 +241,39 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async Task ScanAsync()
     {
-        //IsDirty = false;
-        //IsSaved = false;
+        await _service.CheckProjectStateAsync();
+
+        if (!IsScanned && IsDirty)
+        {
+            AddLog("Project has unsaved changes. Please save before first scan.");
+            return;
+        }
+
+        if (IsSaved && IsDirty)
+        {
+            AddLog("Project has been saved since the last scan. Please scan again before converting.");
+            return;
+        }
+
+        if (IsConverted && IsDirty)
+        {
+            AddLog("Object have been converted since the last scan. Please scan again before converting.");
+            return;
+        }
+
+        else if (IsDirty)
+        {
+            AddLog("Project has unsaved changes. Please save before scan.");
+            return;
+        }
 
         try
         {
             var selectedIds = SelectedActors.Select(a => a.Id).ToHashSet();
             var actors = await _service.GetSanitizableMixersAsync();
-            await _service.SubscribeToChangesAsync();
+
             ActorMixers.Clear();
+
             foreach (var actor in actors)
             {
                 if (selectedIds.Contains(actor.Id))
@@ -278,18 +341,34 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        try
+        if (IsConverted)
         {
-            await _service.CheckProjectStateAsync();
-        }
-        catch (Exception ex)
-        {
-            AddLog($"Error checking project state: {ex.Message}");
+            AddLog("Coversion has been executed since the last scan. Please scan again before converting.");
             return;
         }
 
-        if (IsDirty)
+        if (!IsScanned)
         {
+            AddLog("Scan was not yet run in this session. Please scan and try again.");
+            return;
+        }
+
+        if (!IsDirty)
+        {
+            try
+            {
+                await _service.CheckProjectStateAsync();
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Error checking project state: {ex.Message}");
+                return;
+            }
+        }
+
+        else
+        {
+            AddLog("Project has been changed since the last scan. Please scan again before converting.");
             return;
         }
 
@@ -304,11 +383,15 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             await _service.ConvertToFoldersAsync(selectedActors);
-            await ScanAsync();
         }
         catch (Exception ex)
         {
             AddLog($"Conversion failed: {ex.Message}");
+        }
+
+        foreach (var actor in selectedActors)
+        {
+            _actorMixers.Remove(actor);
         }
     }
 
@@ -336,6 +419,9 @@ public class MainViewModel : INotifyPropertyChanged
     {
         IsDirty = _service.IsDirty;
         IsSaved = _service.IsSaved;
+        IsConverted = _service.IsConverted;
+        IsConnectionLost = _service.IsConnectionLost;
+        IsScanned = _service.IsScanned;
     }
 
     private void AddLog(string message)
