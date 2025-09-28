@@ -3,9 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="Actormixer Sanitizer" Height="450" Width="800"
-        Closing="MainWindow_Closing">
+        Closing="MainWindow_Closing"
+        ExtendsContentIntoTitleBar="True">
     <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="2*"/>
             <RowDefinition Height="5"/>
@@ -13,7 +15,9 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,10">
+        <ui:TitleBar Grid.Row="0" Title="Actormixer Sanitizer" />
+
+        <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -80,7 +84,7 @@
             </Button>
         </Grid>
         <!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
-        <ListBox Grid.Row="1"
+        <ListBox Grid.Row="2"
                  Name="ActorMixerListBox"
                  ItemsSource="{Binding ActorMixers}"
                  SelectionMode="Extended"
@@ -136,13 +140,13 @@
 
         </ListBox>
 
-        <GridSplitter Grid.Row="2" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>
+        <GridSplitter Grid.Row="3" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>
 
-        <TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}"
+        <TextBox Grid.Row="4" Text="{Binding LogText, Mode=OneWay}"
                  IsReadOnly="True" TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"/>
 
-        <Button Grid.Row="4" Command="{Binding ConvertCommand}"
+        <Button Grid.Row="5" Command="{Binding ConvertCommand}"
 			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
 			ToolTip="Convert Selected to Folders"
 			IsEnabled="{Binding IsConvertEnabled}">

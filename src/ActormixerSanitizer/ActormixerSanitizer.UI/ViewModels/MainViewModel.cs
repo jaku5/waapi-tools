@@ -24,6 +24,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CopyPathCommand { get; }
     public ICommand SelectInWwiseCommand { get; }
     public ICommand ShowSelectedListCommand { get; }
+    public ICommand ThemeChangeCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
@@ -114,6 +115,23 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isDarkTheme;
+    public bool IsDarkTheme
+    {
+        get => _isDarkTheme;
+        set
+        {
+            if (_isDarkTheme != value)
+            {
+                _isDarkTheme = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ActorIcon));
+            }
+        }
+    }
+
+    public string ActorIcon => _isDarkTheme ? "ObjectIcons_ActorMixer_nor_light.png" : "ObjectIcons_ActorMixer_nor.png";
+
     public bool IsScanEnabled => !IsNotConnected;
     public bool IsConvertEnabled => !IsNotConnected;
     public bool IsShowSelectedListEnabled => !IsNotConnected;
@@ -144,8 +162,18 @@ public class MainViewModel : INotifyPropertyChanged
         CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
         ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
+        ThemeChangeCommand = new RelayCommand(ThemeChange);
+
+        IsDarkTheme = Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme() == Wpf.Ui.Appearance.SystemTheme.Dark;
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(IsDarkTheme ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
 
         _ = ConnectAsync();
+    }
+
+    private void ThemeChange()
+    {
+        IsDarkTheme = !IsDarkTheme;
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(IsDarkTheme ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
     }
 
     private async Task ConnectAsync()

@@ -14,6 +14,14 @@ namespace ActormixerSanitizer.UI
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += (sender, args) =>
+            {
+                Wpf.Ui.Appearance.SystemThemeWatcher.Watch(
+                    this,                                    // Window class
+                    Wpf.Ui.Controls.WindowBackdropType.Mica, // Background type
+                    true                                     // Whether to change accents automatically
+                );
+            };
         }
 
         private void ListBoxItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
