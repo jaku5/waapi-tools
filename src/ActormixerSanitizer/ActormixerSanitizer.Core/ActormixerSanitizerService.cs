@@ -49,7 +49,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public bool IsScanned
         {
             get => _isScanned;
-            private protected set => _isScanned = value;
+            private set => _isScanned = value;
         }
 
         private List<int> _subscriptionIds = new List<int>();
@@ -141,7 +141,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync()
         {
             _isSaved = false;
-            //_isDirty = false;
             _isConverted = false;
             _isScanned = true;
             _isConnectionLost = false;

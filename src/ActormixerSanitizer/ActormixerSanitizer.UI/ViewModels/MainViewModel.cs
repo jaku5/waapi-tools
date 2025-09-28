@@ -87,8 +87,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     private bool _isConverted;
     public bool IsConverted
-    { 
-        get => _isConverted; 
+    {
+        get => _isConverted;
         set
         {
             _isConverted = value;
@@ -174,7 +174,11 @@ public class MainViewModel : INotifyPropertyChanged
         SelectNoneCommand = new RelayCommand(SelectNone);
         ToggleSelectedCommand = new RelayCommand<IList>(ToggleSelected);
         ConvertCommand = new AsyncRelayCommand(ConvertAsync);
-        CopyNameCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Name));
+        CopyNameCommand = new RelayCommand<ActorMixerInfo>(actor =>
+        {
+            if (!string.IsNullOrEmpty(actor?.Name))
+                CopyToClipboard(actor.Name);
+        });
         CopyIdCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Id));
         CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
@@ -243,12 +247,12 @@ public class MainViewModel : INotifyPropertyChanged
     {
         await _service.CheckProjectStateAsync();
 
+        // Consolidated state validation logic
         if (!IsScanned && IsDirty)
         {
             AddLog("Project has unsaved changes. Please save before first scan.");
             return;
         }
-
         if (IsSaved && IsDirty)
         {
             AddLog("Project has been saved since the last scan. Please scan again before converting.");
@@ -260,8 +264,7 @@ public class MainViewModel : INotifyPropertyChanged
             AddLog("Object have been converted since the last scan. Please scan again before converting.");
             return;
         }
-
-        else if (IsDirty)
+        if (IsDirty)
         {
             AddLog("Project has unsaved changes. Please save before scan.");
             return;
@@ -343,7 +346,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (IsConverted)
         {
-            AddLog("Coversion has been executed since the last scan. Please scan again before converting.");
+            AddLog("Conversion has been executed since the last scan. Please scan again before converting.");
             return;
         }
 
@@ -391,7 +394,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         foreach (var actor in selectedActors)
         {
-            _actorMixers.Remove(actor);
+            ActorMixers.Remove(actor);
         }
     }
 
