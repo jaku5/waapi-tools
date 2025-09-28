@@ -98,7 +98,8 @@
                 <Separator Grid.Column="4"  Margin="10,0,10,0"/>
                 <Button Grid.Column="5" Command="{Binding ShowSelectedListCommand}"
 							Width="60" Margin="0,0,10,0"
-							ToolTip="Show Selected List">
+							ToolTip="Show Selected List"
+                            IsEnabled="{Binding IsShowSelectedListEnabled}">
                     <Image Source="{Binding ShowSelectedListIcon}" Width="32" Height="32" />
                 </Button>
             </Grid>

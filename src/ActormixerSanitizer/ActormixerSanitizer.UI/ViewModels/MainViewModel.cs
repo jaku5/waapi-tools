@@ -58,6 +58,7 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(ConnectIcon));
             OnPropertyChanged(nameof(IsScanEnabled));
             OnPropertyChanged(nameof(IsConvertEnabled));
+            OnPropertyChanged(nameof(IsShowSelectedListEnabled));
         }
     }
 
@@ -155,6 +156,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool IsScanEnabled => !IsNotConnected;
     public bool IsConvertEnabled => !IsNotConnected;
+    public bool IsShowSelectedListEnabled => !IsNotConnected;
 
     public string SelectAllIcon => _isDarkTheme ? "ic_fluent_select_all_on_24_regular_light.png" : "ic_fluent_select_all_on_24_regular.png";
     public string SelectNoneIcon => _isDarkTheme ? "ic_fluent_select_all_off_24_regular_light.png" : "ic_fluent_select_all_off_24_regular.png";
