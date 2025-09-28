@@ -137,6 +137,7 @@ public class MainViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(ConnectIcon));
                 OnPropertyChanged(nameof(ScanIcon));
                 OnPropertyChanged(nameof(ConvertIcon));
+                OnPropertyChanged(nameof(ActorIcon));
                 OnPropertyChanged(nameof(SelectAllIcon));
                 OnPropertyChanged(nameof(SelectNoneIcon));
                 OnPropertyChanged(nameof(ToggleSelectedIcon));
@@ -154,6 +155,7 @@ public class MainViewModel : INotifyPropertyChanged
     public string ToggleSelectedIcon => _isDarkTheme ? "ic_fluent_multiselect_24_regular_light.png" : "ic_fluent_multiselect_24_regular.png";
     public string ShowSelectedListIcon => _isDarkTheme ? "ic_fluent_text_bullet_list_square_24_regular_light.png" : "ic_fluent_text_bullet_list_square_24_regular.png";
     public string ThemeIcon => _isDarkTheme ? "ic_fluent_weather_moon_24_regular_light.png" : "ic_fluent_weather_sunny_24_regular.png";
+    public string ActorIcon => _isDarkTheme ? "ObjectIcons_ActorMixer_nor.png" : "ObjectIcons_ActorMixer_nor_light.png";
 
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 

@@ -24,6 +24,7 @@
 
 	<ItemGroup>
 		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
+		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor_light.png" />
 		<Resource Include="..\..\Resources\ic_fluent_folder_arrow_right_24_regular_light.png" />
 		<Resource Include="..\..\Resources\ic_fluent_folder_arrow_right_24_regular.png" />
 		<Resource Include="..\..\Resources\ic_fluent_folder_prohibited_24_regular_light.png" />

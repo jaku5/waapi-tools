@@ -4,54 +4,54 @@
         Title="Actormixer Sanitizer" Height="450" Width="800"
         Closing="MainWindow_Closing">
     <Window.Resources>
-		<Style x:Key="GraphicToCheckboxStyle" TargetType="{x:Type ToggleButton}">
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ToggleButton}">
-						<Grid Background="Transparent" Width="28" Height="20"
+        <Style x:Key="GraphicToCheckboxStyle" TargetType="{x:Type ToggleButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <Grid Background="Transparent" Width="28" Height="20"
                               VerticalAlignment="Center" HorizontalAlignment="Center">
 
-							<!-- The visual for the CHECKED state: a default CheckBox -->
-							<CheckBox x:Name="CheckedVisual"
+                            <!-- The visual for the CHECKED state: a default CheckBox -->
+                            <CheckBox x:Name="CheckedVisual"
                                       IsChecked="True"
                                       IsHitTestVisible="False"
                                       Visibility="Collapsed"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
 
-							<!-- The visual for the UNCHECKED state: the image -->
-							<Image x:Name="UncheckedVisual"
-                                   Source="ObjectIcons_ActorMixer_nor.png"
+                            <!-- The visual for the UNCHECKED state: the image -->
+                            <Image x:Name="UncheckedVisual"
+                                   Source="{Binding DataContext.ActorIcon, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
 								   HorizontalAlignment="Left"
                                    Visibility="Visible"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsChecked" Value="True">
-								<Setter TargetName="CheckedVisual" Property="Visibility" Value="Visible" />
-								<Setter TargetName="UncheckedVisual" Property="Visibility" Value="Collapsed" />
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-	</Window.Resources>
-	<Grid Margin="10">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="2*"/>
-			<RowDefinition Height="5"/>
-			<RowDefinition Height="*"/>
-			<RowDefinition Height="Auto"/>
-		</Grid.RowDefinitions>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckedVisual" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="UncheckedVisual" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-		<Grid Grid.Row="0" Margin="0,0,0,10">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="Auto" />
-				<ColumnDefinition Width="Auto" />
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-				<ColumnDefinition Width="Auto" />
-			</Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Command="{Binding ConnectCommand}"
 					Width="60" Margin="0,0,0,0" IsEnabled="{Binding IsNotConnected}"
@@ -60,33 +60,33 @@
             </Button>
 
             <Grid Grid.Column="1">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="*" />
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
                 <Separator Grid.Column="0" Margin="10,0,10,0"/>
                 <Button Grid.Column="1" Command="{Binding ScanCommand}"
 						Width="60" Margin="0,0,0,0"
 						ToolTip="Scan">
-					<Image Source="{Binding ScanIcon}" Width="32" Height="32" />
-				</Button>
+                    <Image Source="{Binding ScanIcon}" Width="32" Height="32" />
+                </Button>
                 <Separator Grid.Column="2" Margin="10,0,10,0"/>
-				<StackPanel Grid.Column="3" Orientation="Horizontal">
-					<Button Command="{Binding SelectAllCommand}"
+                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <Button Command="{Binding SelectAllCommand}"
 							Width="60" Margin="0,0,10,0"
 							ToolTip="Select All">
-						<Image Source="{Binding SelectAllIcon}" Width="32" Height="32" />
-					</Button>
-					<Button Command="{Binding SelectNoneCommand}"
+                        <Image Source="{Binding SelectAllIcon}" Width="32" Height="32" />
+                    </Button>
+                    <Button Command="{Binding SelectNoneCommand}"
 							Width="60" Margin="0,0,10,0"
 							ToolTip="Select None">
-						<Image Source="{Binding SelectNoneIcon}" Width="32" Height="32" />
-					</Button>
+                        <Image Source="{Binding SelectNoneIcon}" Width="32" Height="32" />
+                    </Button>
                     <Button Command="{Binding ToggleSelectedCommand}"
 							CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItems}"
 							Width="60" Margin="0,0,0,0"
@@ -102,14 +102,14 @@
                 </Button>
             </Grid>
 
-			<Button Grid.Column="3" Command="{Binding ThemeChangeCommand}"
+            <Button Grid.Column="3" Command="{Binding ThemeChangeCommand}"
 					Width="45" Height ="35" Margin="0,0,0,0"
                     VerticalAlignment="Top"
 					ToolTip="Change app theme">
-				<Image Source="{Binding ThemeIcon}" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-			</Button>
-		</Grid>
-		<!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
+                <Image Source="{Binding ThemeIcon}" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Button>
+        </Grid>
+        <!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
         <ListBox Grid.Row="1"
                  Name="ActorMixerListBox"
                  ItemsSource="{Binding ActorMixers}"
@@ -169,7 +169,7 @@
 
         <GridSplitter Grid.Row="2" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>
 
-		<TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}"
+        <TextBox Grid.Row="3" Text="{Binding LogText, Mode=OneWay}"
                  IsReadOnly="True" TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"/>
 
