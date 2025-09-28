@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
 using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
-using Microsoft.Win32;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -25,7 +24,6 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CopyPathCommand { get; }
     public ICommand SelectInWwiseCommand { get; }
     public ICommand ShowSelectedListCommand { get; }
-    public ICommand ThemeChangeCommand { get; }
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
@@ -55,7 +53,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _isNotConnected = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ConnectIcon));
             OnPropertyChanged(nameof(IsScanEnabled));
             OnPropertyChanged(nameof(IsConvertEnabled));
             OnPropertyChanged(nameof(IsShowSelectedListEnabled));
@@ -70,8 +67,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _isDirty = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ScanIcon));
-            OnPropertyChanged(nameof(ConvertIcon));
         }
     }
 
@@ -83,8 +78,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _isSaved = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ScanIcon));
-            OnPropertyChanged(nameof(ConvertIcon));
         }
     }
 
@@ -96,8 +89,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _isConverted = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ScanIcon));
-            OnPropertyChanged(nameof(ConvertIcon));
         }
     }
 
@@ -109,8 +100,6 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _isConnectionLost = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ScanIcon));
-            OnPropertyChanged(nameof(ConvertIcon));
         }
     }
 
@@ -122,55 +111,17 @@ public class MainViewModel : INotifyPropertyChanged
         {
             _isScanned = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ScanIcon));
-            OnPropertyChanged(nameof(ConvertIcon));
         }
     }
-
-    public static bool _isDarkTheme = false;
-    public bool IsDarkTheme
-    {
-        get => _isDarkTheme;
-        set
-        {
-            if (_isDarkTheme != value)
-            {
-                _isDarkTheme = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(ConnectIcon));
-                OnPropertyChanged(nameof(ScanIcon));
-                OnPropertyChanged(nameof(ConvertIcon));
-                OnPropertyChanged(nameof(ActorIcon));
-                OnPropertyChanged(nameof(SelectAllIcon));
-                OnPropertyChanged(nameof(SelectNoneIcon));
-                OnPropertyChanged(nameof(ToggleSelectedIcon));
-                OnPropertyChanged(nameof(ShowSelectedListIcon));
-                OnPropertyChanged(nameof(ThemeIcon));
-            }
-        }
-    }
-
-    public string ConnectIcon => !IsNotConnected ? (_isDarkTheme ? "ic_fluent_plug_disconnected_24_filled_light.png" : "ic_fluent_plug_disconnected_24_filled.png") : (_isDarkTheme ? "ic_fluent_plug_disconnected_24_regular_light.png" : "ic_fluent_plug_disconnected_24_regular.png");
-    public string ScanIcon => (IsDirty || IsSaved || IsConverted || IsConnectionLost) ? (_isDarkTheme ? "ic_fluent_scan_table_24_filled_light.png" : "ic_fluent_scan_table_24_filled.png") : (_isDarkTheme ? "ic_fluent_scan_table_24_regular_light.png" : "ic_fluent_scan_table_24_regular.png");
-    public string ConvertIcon => (IsDirty || IsSaved || IsConverted || IsConnectionLost) ? (_isDarkTheme ? "ic_fluent_folder_prohibited_24_regular_light.png" : "ic_fluent_folder_prohibited_24_regular.png") : (_isDarkTheme ? "ic_fluent_folder_arrow_right_24_regular_light.png" : "ic_fluent_folder_arrow_right_24_regular.png");
 
     public bool IsScanEnabled => !IsNotConnected;
     public bool IsConvertEnabled => !IsNotConnected;
     public bool IsShowSelectedListEnabled => !IsNotConnected;
 
-    public string SelectAllIcon => _isDarkTheme ? "ic_fluent_select_all_on_24_regular_light.png" : "ic_fluent_select_all_on_24_regular.png";
-    public string SelectNoneIcon => _isDarkTheme ? "ic_fluent_select_all_off_24_regular_light.png" : "ic_fluent_select_all_off_24_regular.png";
-    public string ToggleSelectedIcon => _isDarkTheme ? "ic_fluent_multiselect_24_regular_light.png" : "ic_fluent_multiselect_24_regular.png";
-    public string ShowSelectedListIcon => _isDarkTheme ? "ic_fluent_text_bullet_list_square_24_regular_light.png" : "ic_fluent_text_bullet_list_square_24_regular.png";
-    public string ThemeIcon => _isDarkTheme ? "ic_fluent_weather_moon_24_regular_light.png" : "ic_fluent_weather_sunny_24_regular.png";
-    public string ActorIcon => _isDarkTheme ? "ObjectIcons_ActorMixer_nor.png" : "ObjectIcons_ActorMixer_nor_light.png";
-
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
     public MainViewModel()
     {
-        _isDarkTheme = IsDarkModeEnabled();
-
         _service = new ActormixerSanitizerService();
         _service.LogMessage += OnLogMessage;
         _service.Disconnected += OnDisconnected;
@@ -193,48 +144,8 @@ public class MainViewModel : INotifyPropertyChanged
         CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
         ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
-        ThemeChangeCommand = new RelayCommand(ThemeChange);
 
         _ = ConnectAsync();
-    }
-
-    public static bool IsDarkModeEnabled()
-    {
-        if (Application.Current.ThemeMode == ThemeMode.Light)
-        {
-            return false;
-        }
-
-        else if (Application.Current.ThemeMode == ThemeMode.Dark)
-        {
-            return true;
-        }
-
-        else if (Application.Current.ThemeMode == ThemeMode.System)
-        {
-            const string registryKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
-            const string registryValue = "AppsUseLightTheme";
-
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(registryKey))
-            {
-                if (key != null)
-                {
-                    var value = key.GetValue(registryValue);
-                    if (value != null && value is int)
-                    {
-                        return (int)value == 0;  // 0 means Dark, 1 means Light
-                    }
-                }
-            }
-        }
-
-        return false; // Default to Light if the key or value doesn't exist
-    }
-
-    private void ThemeChange()
-    {
-        IsDarkTheme = !IsDarkTheme;
-        Application.Current.ThemeMode = IsDarkTheme ? ThemeMode.Dark : ThemeMode.Light;
     }
 
     private async Task ConnectAsync()

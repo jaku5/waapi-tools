@@ -15,7 +15,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+		<PackageReference Include="WPF-UI" Version="3.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -25,28 +26,6 @@
 	<ItemGroup>
 		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
 		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_folder_arrow_right_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_folder_arrow_right_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_folder_prohibited_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_folder_prohibited_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_multiselect_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_multiselect_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_filled_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_filled.png" />
-		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_plug_disconnected_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_filled_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_filled.png" />
-		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_scan_table_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_select_all_off_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_select_all_off_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_select_all_on_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_select_all_on_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_text_bullet_list_square_24_regular_light.png" />
-		<Resource Include="..\..\Resources\ic_fluent_text_bullet_list_square_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_weather_sunny_24_regular.png" />
-		<Resource Include="..\..\Resources\ic_fluent_weather_moon_24_regular_light.png" />
 	</ItemGroup>
 
 </Project>
