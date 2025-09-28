@@ -56,6 +56,8 @@ public class MainViewModel : INotifyPropertyChanged
             _isNotConnected = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(ConnectIcon));
+            OnPropertyChanged(nameof(IsScanEnabled));
+            OnPropertyChanged(nameof(IsConvertEnabled));
         }
     }
 
@@ -150,6 +152,10 @@ public class MainViewModel : INotifyPropertyChanged
     public string ConnectIcon => !IsNotConnected ? (_isDarkTheme ? "ic_fluent_plug_disconnected_24_filled_light.png" : "ic_fluent_plug_disconnected_24_filled.png") : (_isDarkTheme ? "ic_fluent_plug_disconnected_24_regular_light.png" : "ic_fluent_plug_disconnected_24_regular.png");
     public string ScanIcon => (IsDirty || IsSaved || IsConverted || IsConnectionLost) ? (_isDarkTheme ? "ic_fluent_scan_table_24_filled_light.png" : "ic_fluent_scan_table_24_filled.png") : (_isDarkTheme ? "ic_fluent_scan_table_24_regular_light.png" : "ic_fluent_scan_table_24_regular.png");
     public string ConvertIcon => (IsDirty || IsSaved || IsConverted || IsConnectionLost) ? (_isDarkTheme ? "ic_fluent_folder_prohibited_24_regular_light.png" : "ic_fluent_folder_prohibited_24_regular.png") : (_isDarkTheme ? "ic_fluent_folder_arrow_right_24_regular_light.png" : "ic_fluent_folder_arrow_right_24_regular.png");
+
+    public bool IsScanEnabled => !IsNotConnected;
+    public bool IsConvertEnabled => !IsNotConnected;
+
     public string SelectAllIcon => _isDarkTheme ? "ic_fluent_select_all_on_24_regular_light.png" : "ic_fluent_select_all_on_24_regular.png";
     public string SelectNoneIcon => _isDarkTheme ? "ic_fluent_select_all_off_24_regular_light.png" : "ic_fluent_select_all_off_24_regular.png";
     public string ToggleSelectedIcon => _isDarkTheme ? "ic_fluent_multiselect_24_regular_light.png" : "ic_fluent_multiselect_24_regular.png";

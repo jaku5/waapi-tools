@@ -72,7 +72,8 @@
                 <Separator Grid.Column="0" Margin="10,0,10,0"/>
                 <Button Grid.Column="1" Command="{Binding ScanCommand}"
 						Width="60" Margin="0,0,0,0"
-						ToolTip="Scan">
+						ToolTip="Scan"
+                        IsEnabled="{Binding IsScanEnabled}">
                     <Image Source="{Binding ScanIcon}" Width="32" Height="32" />
                 </Button>
                 <Separator Grid.Column="2" Margin="10,0,10,0"/>
@@ -175,7 +176,8 @@
 
         <Button Grid.Row="4" Command="{Binding ConvertCommand}"
 			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
-			ToolTip="Convert Selected to Folders">
+			ToolTip="Convert Selected to Folders"
+			IsEnabled="{Binding IsConvertEnabled}">
             <Image Source="{Binding ConvertIcon}" Width="32" Height="32"/>
         </Button>
     </Grid>
