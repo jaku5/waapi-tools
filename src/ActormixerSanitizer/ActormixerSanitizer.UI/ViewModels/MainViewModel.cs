@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 
+using Wpf.Ui.Controls;
+
 public class MainViewModel : INotifyPropertyChanged
 {
     private readonly ActormixerSanitizerService _service;
@@ -57,6 +59,10 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IsScanEnabled));
             OnPropertyChanged(nameof(IsConvertEnabled));
             OnPropertyChanged(nameof(IsShowSelectedListEnabled));
+            OnPropertyChanged(nameof(ConnectIcon));
+            OnPropertyChanged(nameof(ShowSelectedListIcon));
+            OnPropertyChanged(nameof(ConvertIcon));
+            OnPropertyChanged(nameof(IsConnectIconFilled));
         }
     }
 
@@ -126,11 +132,17 @@ public class MainViewModel : INotifyPropertyChanged
                 _isDarkTheme = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ActorIcon));
+                OnPropertyChanged(nameof(ThemeIcon));
             }
         }
     }
 
     public string ActorIcon => _isDarkTheme ? "ObjectIcons_ActorMixer_nor_light.png" : "ObjectIcons_ActorMixer_nor.png";
+    public SymbolRegular ThemeIcon => _isDarkTheme ? SymbolRegular.WeatherSunny24 : SymbolRegular.WeatherMoon24;
+    public SymbolRegular ConnectIcon => IsNotConnected ? SymbolRegular.PlugDisconnected24 : SymbolRegular.PlugConnected24;
+    public bool IsConnectIconFilled => IsNotConnected;
+    public SymbolRegular ShowSelectedListIcon => IsShowSelectedListEnabled ? SymbolRegular.TextBulletListSquare24 : SymbolRegular.TextBulletListSquareWarning24;
+    public SymbolRegular ConvertIcon => IsConvertEnabled ? SymbolRegular.FolderArrowRight24 : SymbolRegular.FolderProhibited24;
 
     public bool IsScanEnabled => !IsNotConnected;
     public bool IsConvertEnabled => !IsNotConnected;
