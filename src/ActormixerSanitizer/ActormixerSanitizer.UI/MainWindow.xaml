@@ -149,7 +149,8 @@
                                 <MenuItem Header="Copy name" Command="{Binding PlacementTarget.Tag.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                                 <MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                                 <MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" IsEnabled="{Binding PlacementTarget.Tag.IsScanEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
