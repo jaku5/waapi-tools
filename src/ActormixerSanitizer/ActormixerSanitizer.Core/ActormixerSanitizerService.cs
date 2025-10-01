@@ -152,8 +152,6 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             _isScanned = true;
             _isConnectionLost = false;
 
-            await CheckProjectStateAsync();
-
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             await UnsubscribeFromChangesAsync();
 
@@ -198,16 +196,12 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 {
                     _isDirty = true;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                    _logger.LogInformation("Project changes detected. Please save the project and rescan or undo the changes.");
-                    NotificationRequested?.Invoke(this, "Project changes detected. Please save the project and rescan or undo the changes.");
-                    return;
                 }
 
                 else if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == false)
                 {
                     _isDirty = false;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                    return;
                 }
             }
             catch (Exception ex)
