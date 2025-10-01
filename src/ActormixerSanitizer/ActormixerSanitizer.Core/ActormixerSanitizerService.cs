@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using JPAudio.WaapiTools.ClientJson;
 
 namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
@@ -6,6 +7,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
     public class ActormixerSanitizerService
     {
         private readonly JsonClient _client;
+        private readonly ILogger<ActormixerSanitizerService> _logger;
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
         private const string ObjectGetUri = ak.wwise.core.@object.get;
@@ -13,7 +15,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         private readonly static List<string> _unityProperties = new List<string> { "Volume", "Pitch", "Lowpass", "Highpass", "MakeUpGain" };
         private readonly static List<string> _wwiseCommands = new List<string> { "Undo", "Redo" };
 
-        public event EventHandler<string> LogMessage;
+        public event EventHandler<string> StatusUpdated;
+        public event EventHandler<string> NotificationRequested;
         public event EventHandler Disconnected;
         public event EventHandler ProjectStateChanged;
 
@@ -80,11 +83,13 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 _isSaved = true;
                 _isDirty = false;
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                LogMessage?.Invoke(this, $"Project has been saved. Please rescan.");
+                _logger.LogInformation("Project has been saved. Please rescan.");
+                NotificationRequested?.Invoke(this, "Project has been saved. Please rescan.");
             }
             catch (Exception ex)
             {
-                LogMessage?.Invoke(this, $"Error processing project.saved event: {ex.Message}");
+                _logger.LogError(ex, "Error processing project.saved event");
+                NotificationRequested?.Invoke(this, $"Error processing project.saved event: {ex.Message}");
             }
         }
 
@@ -102,7 +107,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             {
                 _isDirty = true;
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                LogMessage?.Invoke(this, $"Project changes detected. Please save the project and rescan or undo the changes.");
+                _logger.LogInformation("Project changes detected. Please save the project and rescan or undo the changes.");
+                NotificationRequested?.Invoke(this, "Project changes detected. Please save the project and rescan or undo the changes.");
             }
         }
 
@@ -115,10 +121,11 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             _subscriptionIds.Clear();
         }
 
-        public ActormixerSanitizerService()
+        public ActormixerSanitizerService(ILogger<ActormixerSanitizerService> logger)
         {
             _client = new JsonClient();
             _client.Disconnected += () => Disconnected?.Invoke(this, EventArgs.Empty);
+            _logger = logger;
         }
 
         public void Disconnect()
@@ -191,7 +198,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 {
                     _isDirty = true;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                    LogMessage?.Invoke(this, $"Project changes detected. Please save the project and rescan or undo the changes.");
+                    _logger.LogInformation("Project changes detected. Please save the project and rescan or undo the changes.");
+                    NotificationRequested?.Invoke(this, "Project changes detected. Please save the project and rescan or undo the changes.");
                     return;
                 }
 
@@ -204,7 +212,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
             catch (Exception ex)
             {
-                LogMessage?.Invoke(this, $"Error checking project info: {ex.Message}");
+                _logger.LogError(ex, "Error checking project info");
+                NotificationRequested?.Invoke(this, $"Error checking project info: {ex.Message}");
             }
         }
 
@@ -214,7 +223,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             foreach (var actor in actors)
             {
-                LogMessage?.Invoke(this, $"Converting: {actor.Name}");
+                _logger.LogInformation($"Converting: {actor.Name}");
+                StatusUpdated?.Invoke(this, $"Converting: {actor.Name}");
                 var tempName = $"{actor.Name}Temp";
 
                 await _client.Call(ak.wwise.core.@object.create, new JObject(

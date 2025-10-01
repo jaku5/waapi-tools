@@ -45,7 +45,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="2*"/>
             <RowDefinition Height="5"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="0" x:Name="LogViewerRow"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -110,12 +110,20 @@
                 </Button>
             </Grid>
 
-            <Button Grid.Column="3" Command="{Binding ThemeChangeCommand}"
-					Width="45" Height ="35" Margin="0,0,0,0"
+            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <Button Command="{Binding ThemeChangeCommand}"
+					Width="45" Height ="35" Margin="0,0,10,0"
                     VerticalAlignment="Top"
 					ToolTip="Change app theme">
-                <ui:SymbolIcon Symbol="{Binding ThemeIcon}" FontSize="16" />
-            </Button>
+                    <ui:SymbolIcon Symbol="{Binding ThemeIcon}" FontSize="16" />
+                </Button>
+                <Button Command="{Binding ToggleLogViewerCommand}"
+					Width="45" Height ="35" Margin="0,0,0,0"
+                    VerticalAlignment="Top"
+					ToolTip="Toggle Log Viewer">
+                    <ui:SymbolIcon Symbol="TextBulletListSquare24" FontSize="16" />
+                </Button>
+            </StackPanel>
         </Grid>
         <!-- Replaced DataGrid with ListBox using solution 2: bind ListBoxItem.IsSelected to item.IsSelected -->
         <ListBox Grid.Row="2"

@@ -1,5 +1,8 @@
+using ActormixerSanitizer.UI.Messages;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
+using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -9,9 +12,13 @@ using System.Windows.Input;
 
 using Wpf.Ui.Controls;
 
-public class MainViewModel : INotifyPropertyChanged
+namespace ActormixerSanitizer.UI.ViewModels
+{
+    public class MainViewModel : INotifyPropertyChanged
 {
     private readonly ActormixerSanitizerService _service;
+    private readonly ILogger<MainViewModel> _logger;
+    private readonly IMessenger _messenger;
     private ObservableCollection<ActorMixerInfo> _actorMixers;
     private string _logText = "";
 
@@ -27,6 +34,9 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SelectInWwiseCommand { get; }
     public ICommand ShowSelectedListCommand { get; }
     public ICommand ThemeChangeCommand { get; }
+    public ICommand ToggleLogViewerCommand { get; }
+
+    public IMessenger Messenger => _messenger;
 
     public ObservableCollection<ActorMixerInfo> ActorMixers
     {
@@ -47,6 +57,10 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+
+
+
 
     private bool _isNotConnected;
     public bool IsNotConnected
@@ -150,10 +164,13 @@ public class MainViewModel : INotifyPropertyChanged
 
     private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
-    public MainViewModel()
+    public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger)
     {
-        _service = new ActormixerSanitizerService();
-        _service.LogMessage += OnLogMessage;
+        _service = service;
+        _logger = logger;
+        _messenger = messenger;
+        _service.StatusUpdated += OnStatusUpdated;
+        _service.NotificationRequested += OnNotificationRequested;
         _service.Disconnected += OnDisconnected;
         _service.ProjectStateChanged += OnProjectStateChanged;
 
@@ -175,11 +192,36 @@ public class MainViewModel : INotifyPropertyChanged
         SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
         ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
         ThemeChangeCommand = new RelayCommand(ThemeChange);
+        ToggleLogViewerCommand = new RelayCommand(ToggleLogViewer);
 
         IsDarkTheme = Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme() == Wpf.Ui.Appearance.SystemTheme.Dark;
         Wpf.Ui.Appearance.ApplicationThemeManager.Apply(IsDarkTheme ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
 
         _ = ConnectAsync();
+    }
+
+    private bool _isLogViewerVisible = false;
+
+    private void ToggleLogViewer()
+    {
+        _isLogViewerVisible = !_isLogViewerVisible;
+        _messenger.Send(new ToggleLogViewerMessage(_isLogViewerVisible));
+    }
+
+    private void OnNotificationRequested(object sender, string message)
+    {
+        AddLog(message);
+    }
+
+    private void OnStatusUpdated(object sender, string message)
+    {
+        AddLog(message);
+    }
+
+    private void AddLog(string message)
+    {
+        LogText = $"{DateTime.Now:HH:mm:ss}: {message}\n{LogText}";
+        _logger.LogInformation(message);
     }
 
     private void ThemeChange()
@@ -368,11 +410,6 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private void OnLogMessage(object sender, string message)
-    {
-        AddLog(message);
-    }
-
     private void OnDisconnected(object sender, EventArgs e)
     {
         AddLog("Disconnected from Wwise");
@@ -386,11 +423,6 @@ public class MainViewModel : INotifyPropertyChanged
         IsConverted = _service.IsConverted;
         IsConnectionLost = _service.IsConnectionLost;
         IsScanned = _service.IsScanned;
-    }
-
-    private void AddLog(string message)
-    {
-        LogText = $"{DateTime.Now:HH:mm:ss}: {message}\n{LogText}";
     }
 
     private async Task SelectInWwise(string actorId)
@@ -434,4 +466,5 @@ public class MainViewModel : INotifyPropertyChanged
     {
         await _service.UnsubscribeFromChangesAsync();
     }
+}
 }
