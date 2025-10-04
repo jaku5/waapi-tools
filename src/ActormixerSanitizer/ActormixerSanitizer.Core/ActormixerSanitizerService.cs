@@ -55,6 +55,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             private set => _isScanned = value;
         }
 
+        public bool IsConverting { get; private set; }
+
         private List<int> _subscriptionIds = new List<int>();
 
         public async Task SubscribeToChangesAsync()
@@ -103,6 +105,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         private void OnObjectChanged(JObject json)
         {
+            if (IsConverting) return;
+
             if (!_isDirty)
             {
                 _isDirty = true;
@@ -213,6 +217,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors)
         {
+            IsConverting = true;
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
             foreach (var actor in actors)
@@ -256,6 +261,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             _isConverted = true;
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+            IsConverting = false;
         }
 
         private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)

@@ -8,9 +8,12 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Threading;
 using System.Windows.Input;
-
+using Wpf.Ui;
+//using Wpf.Ui.Contracts;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Extensions;
 
 namespace ActormixerSanitizer.UI.ViewModels
 {
@@ -19,6 +22,8 @@ namespace ActormixerSanitizer.UI.ViewModels
         private readonly ActormixerSanitizerService _service;
         private readonly ILogger<MainViewModel> _logger;
         private readonly IMessenger _messenger;
+        private readonly IContentDialogService _contentDialogService;
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private ObservableCollection<ActorMixerInfo> _actorMixers;
         private string _logText = "";
 
@@ -57,7 +62,6 @@ namespace ActormixerSanitizer.UI.ViewModels
                 OnPropertyChanged();
             }
         }
-
 
 
 
@@ -164,11 +168,12 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
-        public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger)
+        public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger, IContentDialogService contentDialogService)
         {
             _service = service;
             _logger = logger;
             _messenger = messenger;
+            _contentDialogService = contentDialogService;
             _service.StatusUpdated += OnStatusUpdated;
             _service.NotificationRequested += OnNotificationRequested;
             _service.Disconnected += OnDisconnected;
@@ -208,9 +213,34 @@ namespace ActormixerSanitizer.UI.ViewModels
             _messenger.Send(new ToggleLogViewerMessage(_isLogViewerVisible));
         }
 
-        private void OnNotificationRequested(object sender, string message)
+
+
+        private async void OnNotificationRequested(object sender, string message)
         {
-            AddLog(message);
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            try
+            {
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    var contentDialog = new ContentDialog
+                    {
+                        Title = "Notification",
+                        Content = message,
+                        CloseButtonText = "OK",
+                        VerticalContentAlignment = VerticalAlignment.Center,
+                        DialogMaxHeight = 200,
+                        DialogMaxWidth = 500
+                    };
+
+                    await _contentDialogService.ShowAsync(contentDialog, _cancellationTokenSource.Token);
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // The dialog was cancelled by a new notification
+            }
         }
 
         private void OnStatusUpdated(object sender, string message)
@@ -228,7 +258,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         {
             if (IsDirty)
             {
-                AddLog("Project has unsaved changes. Please save the project in Wwise before scanning.");
+                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before scanning.");
                 return false;
             }
             return true;
@@ -238,22 +268,22 @@ namespace ActormixerSanitizer.UI.ViewModels
         {
             if (IsDirty)
             {
-                AddLog("Project has unsaved changes. Please save the project in Wwise before converting.");
+                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before converting.");
                 return false;
             }
             if (IsSaved)
             {
-                AddLog("Project has been saved. Please scan again before converting.");
+                OnNotificationRequested(this, "Project has been saved. Please scan again before converting.");
                 return false;
             }
             if (IsConverted)
             {
-                AddLog("Some objects have been converted. Please scan again to refresh the list.");
+                OnNotificationRequested(this, "Some objects have been converted. Please scan again to refresh the list.");
                 return false;
             }
             if (!IsScanned)
             {
-                AddLog("Please scan the project before converting.");
+                OnNotificationRequested(this, "Please scan the project before converting.");
                 return false;
             }
             return true;
@@ -369,18 +399,42 @@ namespace ActormixerSanitizer.UI.ViewModels
                 return;
             }
 
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource = new CancellationTokenSource();
+
             try
             {
+                var confirmDialog = new ContentDialog
+                {
+                    Title = "Confirm Conversion",
+                    Content = $"Are you sure you want to convert {selectedActors.Count} actor-mixers?",
+                    PrimaryButtonText = "OK",
+                    CloseButtonText = "Cancel",
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    DialogMaxHeight = 200
+                };
+
+                var result = await _contentDialogService.ShowAsync(confirmDialog, _cancellationTokenSource.Token);
+
+                if (result != ContentDialogResult.Primary)
+                    return;
+
                 await _service.ConvertToFoldersAsync(selectedActors);
+
+                foreach (var actor in selectedActors)
+                {
+                    ActorMixers.Remove(actor);
+                }
+
+                OnNotificationRequested(this, $"Successfully converted {selectedActors.Count} actor-mixers.");
+            }
+            catch (OperationCanceledException)
+            {
+                // The dialog was cancelled by a new notification
             }
             catch (Exception ex)
             {
                 AddLog($"Conversion failed: {ex.Message}");
-            }
-
-            foreach (var actor in selectedActors)
-            {
-                ActorMixers.Remove(actor);
             }
         }
 

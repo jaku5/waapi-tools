@@ -3,15 +3,14 @@ using CommunityToolkit.Mvvm.Messaging;
 using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Configuration;
-using System.Data;
 using System.Windows;
+using Wpf.Ui;
+
+//using Wpf.Ui.Contracts;
+//using Wpf.Ui.Services;
 
 namespace ActormixerSanitizer.UI
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : Application
     {
         private ServiceProvider _serviceProvider;
@@ -25,10 +24,8 @@ namespace ActormixerSanitizer.UI
 
             _serviceProvider = serviceCollection.BuildServiceProvider();
 
-            var mainWindow = new MainWindow
-            {
-                DataContext = _serviceProvider.GetRequiredService<MainViewModel>()
-            };
+            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            mainWindow.DataContext = _serviceProvider.GetRequiredService<MainViewModel>();
 
             mainWindow.Show();
         }
@@ -41,8 +38,10 @@ namespace ActormixerSanitizer.UI
             });
 
             services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+            services.AddSingleton<IContentDialogService, ContentDialogService>();
             services.AddSingleton<ActormixerSanitizerService>();
             services.AddSingleton<MainViewModel>();
+            services.AddSingleton<MainWindow>();
         }
 
         protected override void OnExit(ExitEventArgs e)

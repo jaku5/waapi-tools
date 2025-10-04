@@ -196,5 +196,7 @@
 			IsEnabled="{Binding IsConvertEnabled}">
             <ui:SymbolIcon Symbol="{Binding ConvertIcon}" FontSize="32" />
         </Button>
+
+        <ContentPresenter x:Name="RootContentDialog" VerticalAlignment="Stretch" Grid.RowSpan="6" Margin="-10,-10,-10,-10"/>
     </Grid>
 </ui:FluentWindow>

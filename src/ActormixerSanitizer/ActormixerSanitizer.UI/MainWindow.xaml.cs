@@ -9,6 +9,8 @@ using ActormixerSanitizer.UI.ViewModels;
 using Wpf.Ui.Controls;
 using System.Windows;
 
+using Wpf.Ui;
+
 namespace ActormixerSanitizer.UI
 {
     /// <summary>
@@ -18,9 +20,14 @@ namespace ActormixerSanitizer.UI
     {
         private GridLength _lastLogViewerHeight = new GridLength(1, GridUnitType.Star);
 
-        public MainWindow()
+        private readonly IContentDialogService _contentDialogService;
+
+        public MainWindow(IContentDialogService contentDialogService)
         {
             InitializeComponent();
+
+            _contentDialogService = contentDialogService;
+
             Loaded += (sender, args) =>
             {
                 Wpf.Ui.Appearance.SystemThemeWatcher.Watch(
@@ -29,11 +36,17 @@ namespace ActormixerSanitizer.UI
                     true                                     // Whether to change accents automatically
                 );
 
+                _contentDialogService.SetContentPresenter(RootContentDialog);
+
                 if (DataContext is MainViewModel vm)
                 {
                     vm.Messenger.Register<ToggleLogViewerMessage>(this);
                 }
             };
+        }
+
+        public MainWindow()
+        {
         }
 
         public void Receive(ToggleLogViewerMessage message)
