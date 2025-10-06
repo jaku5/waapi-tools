@@ -74,11 +74,7 @@ namespace ActormixerSanitizer.UI
 
         public static void SetTheme(bool isDark)
         {
-            var newTheme = isDark ? "FluentDark.xaml" : "Fluent.xaml";
-            var dictionary = new ResourceDictionary { Source = new System.Uri($"pack://application:,,,/PresentationFramework.Fluent;component/Themes/{newTheme}", System.UriKind.Absolute) };
-            
-            Application.Current.Resources.MergedDictionaries.Clear();
-            Application.Current.Resources.MergedDictionaries.Add(dictionary);
+            Application.Current.ThemeMode = isDark ? ThemeMode.Dark : ThemeMode.Light;
         }
     }
 }
