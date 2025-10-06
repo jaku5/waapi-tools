@@ -10,10 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Threading;
 using System.Windows.Input;
-using Wpf.Ui;
-//using Wpf.Ui.Contracts;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
+
 
 namespace ActormixerSanitizer.UI.ViewModels
 {
@@ -22,8 +19,8 @@ namespace ActormixerSanitizer.UI.ViewModels
         private readonly ActormixerSanitizerService _service;
         private readonly ILogger<MainViewModel> _logger;
         private readonly IMessenger _messenger;
-        private readonly IContentDialogService _contentDialogService;
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
+        
         private ObservableCollection<ActorMixerInfo> _actorMixers;
         private string _logText = "";
 
@@ -155,12 +152,12 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
-        public string ActorIcon => _isDarkTheme ? "ObjectIcons_ActorMixer_nor_light.png" : "ObjectIcons_ActorMixer_nor.png";
-        public SymbolRegular ThemeIcon => _isDarkTheme ? SymbolRegular.WeatherSunny24 : SymbolRegular.WeatherMoon24;
-        public SymbolRegular ConnectIcon => IsNotConnected ? SymbolRegular.PlugDisconnected24 : SymbolRegular.PlugConnected24;
+        public string ActorIcon => _isDarkTheme ? "..\\..\\Resources\\ObjectIcons_ActorMixer_nor_light.png" : "..\\..\\Resources\\ObjectIcons_ActorMixer_nor.png";
+        public string ThemeIcon => _isDarkTheme ? "&#xe706;" : "&#xec46;";
+        public string ConnectIcon => IsNotConnected ? "&#xea14;" : "&#xe703;";
         public bool IsConnectIconFilled => IsNotConnected;
-        public SymbolRegular ShowSelectedListIcon => IsShowSelectedListEnabled ? SymbolRegular.TextBulletListSquare24 : SymbolRegular.TextBulletListSquareWarning24;
-        public SymbolRegular ConvertIcon => IsConvertEnabled ? SymbolRegular.FolderArrowRight24 : SymbolRegular.FolderProhibited24;
+        public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "&#xE92D;" : "&#xE8A1;";
+        public string ConvertIcon => IsConvertEnabled ? "&#xE8fE;" : "&#xE8A1;";
 
         public bool IsScanEnabled => !IsNotConnected;
         public bool IsConvertEnabled => !IsNotConnected;
@@ -168,12 +165,11 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
-        public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger, IContentDialogService contentDialogService)
+        public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger)
         {
             _service = service;
             _logger = logger;
             _messenger = messenger;
-            _contentDialogService = contentDialogService;
             _service.StatusUpdated += OnStatusUpdated;
             _service.NotificationRequested += OnNotificationRequested;
             _service.Disconnected += OnDisconnected;
@@ -199,8 +195,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             ThemeChangeCommand = new RelayCommand(ThemeChange);
             ToggleLogViewerCommand = new RelayCommand(ToggleLogViewer);
 
-            IsDarkTheme = Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme() == Wpf.Ui.Appearance.SystemTheme.Dark;
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(IsDarkTheme ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
+            IsDarkTheme = App.IsDarkModeEnabled();
+            App.SetTheme(IsDarkTheme);
 
             _ = ConnectAsync();
         }
@@ -215,32 +211,16 @@ namespace ActormixerSanitizer.UI.ViewModels
 
 
 
-        private async void OnNotificationRequested(object sender, string message)
+        private void OnNotificationRequested(object sender, string message)
         {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource = new CancellationTokenSource();
-
-            try
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                await Application.Current.Dispatcher.InvokeAsync(async () =>
-                {
-                    var contentDialog = new ContentDialog
-                    {
-                        Title = "Notification",
-                        Content = message,
-                        CloseButtonText = "OK",
-                        VerticalContentAlignment = VerticalAlignment.Center,
-                        DialogMaxHeight = 200,
-                        DialogMaxWidth = 500
-                    };
-
-                    await _contentDialogService.ShowAsync(contentDialog, _cancellationTokenSource.Token);
-                });
-            }
-            catch (OperationCanceledException)
-            {
-                // The dialog was cancelled by a new notification
-            }
+                var dialog = new Dialogs.MessageDialog(
+                    "Notification",
+                    message,
+                    Application.Current.MainWindow);
+                dialog.ShowDialog();
+            });
         }
 
         private void OnStatusUpdated(object sender, string message)
@@ -292,7 +272,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         private void ThemeChange()
         {
             IsDarkTheme = !IsDarkTheme;
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(IsDarkTheme ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
+            App.SetTheme(IsDarkTheme);
         }
 
         private async Task ConnectAsync()
@@ -399,26 +379,17 @@ namespace ActormixerSanitizer.UI.ViewModels
                 return;
             }
 
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource = new CancellationTokenSource();
+            var confirmDialog = new Dialogs.MessageDialog(
+                "Confirm Conversion",
+                $"Are you sure you want to convert {selectedActors.Count} actor-mixers?",
+                Application.Current.MainWindow, 
+                true);
+
+            if (confirmDialog.ShowDialog() != true)
+                return;
 
             try
             {
-                var confirmDialog = new ContentDialog
-                {
-                    Title = "Confirm Conversion",
-                    Content = $"Are you sure you want to convert {selectedActors.Count} actor-mixers?",
-                    PrimaryButtonText = "OK",
-                    CloseButtonText = "Cancel",
-                    VerticalContentAlignment = VerticalAlignment.Center,
-                    DialogMaxHeight = 200
-                };
-
-                var result = await _contentDialogService.ShowAsync(confirmDialog, _cancellationTokenSource.Token);
-
-                if (result != ContentDialogResult.Primary)
-                    return;
-
                 await _service.ConvertToFoldersAsync(selectedActors);
 
                 foreach (var actor in selectedActors)
@@ -427,10 +398,6 @@ namespace ActormixerSanitizer.UI.ViewModels
                 }
 
                 OnNotificationRequested(this, $"Successfully converted {selectedActors.Count} actor-mixers.");
-            }
-            catch (OperationCanceledException)
-            {
-                // The dialog was cancelled by a new notification
             }
             catch (Exception ex)
             {

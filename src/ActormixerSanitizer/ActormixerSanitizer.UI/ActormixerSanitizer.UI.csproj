@@ -16,7 +16,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="WPF-UI" Version="3.0.0" />
+
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 	</ItemGroup>
 
@@ -28,5 +28,7 @@
 		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
 		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor_light.png" />
 	</ItemGroup>
+
+
 
 </Project>

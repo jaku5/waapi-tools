@@ -6,49 +6,29 @@ using System.Windows.Controls;
 using System.Windows.Input;
 //using ActormixerSanitizer.Core.Models;
 using ActormixerSanitizer.UI.ViewModels;
-using Wpf.Ui.Controls;
 using System.Windows;
 
-using Wpf.Ui;
 
 namespace ActormixerSanitizer.UI
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : FluentWindow, IRecipient<ToggleLogViewerMessage>
+    public partial class MainWindow : Window, IRecipient<ToggleLogViewerMessage>
     {
         private GridLength _lastLogViewerHeight = new GridLength(1, GridUnitType.Star);
 
-        private readonly IContentDialogService _contentDialogService;
-
-        public MainWindow(IContentDialogService contentDialogService)
+        public MainWindow()
         {
             InitializeComponent();
-
-            _contentDialogService = contentDialogService;
-
             Loaded += (sender, args) =>
             {
-                Wpf.Ui.Appearance.SystemThemeWatcher.Watch(
-                    this,                                    // Window class
-                    Wpf.Ui.Controls.WindowBackdropType.Mica, // Background type
-                    true                                     // Whether to change accents automatically
-                );
-
-                _contentDialogService.SetContentPresenter(RootContentDialog);
-
                 if (DataContext is MainViewModel vm)
                 {
                     vm.Messenger.Register<ToggleLogViewerMessage>(this);
                 }
             };
         }
-
-        public MainWindow()
-        {
-        }
-
         public void Receive(ToggleLogViewerMessage message)
         {
             if (message.Value)
