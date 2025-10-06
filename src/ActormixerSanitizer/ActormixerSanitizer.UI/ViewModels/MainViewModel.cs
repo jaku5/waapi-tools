@@ -153,11 +153,11 @@ namespace ActormixerSanitizer.UI.ViewModels
         }
 
         public string ActorIcon => _isDarkTheme ? "..\\..\\Resources\\ObjectIcons_ActorMixer_nor_light.png" : "..\\..\\Resources\\ObjectIcons_ActorMixer_nor.png";
-        public string ThemeIcon => _isDarkTheme ? "&#xe706;" : "&#xec46;";
-        public string ConnectIcon => IsNotConnected ? "&#xea14;" : "&#xe703;";
+        public string ThemeIcon => _isDarkTheme ? "\uE706" : "\uEC46";
+        public string ConnectIcon => IsNotConnected ? "\ueb55" : "\uec64";
         public bool IsConnectIconFilled => IsNotConnected;
-        public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "&#xE92D;" : "&#xE8A1;";
-        public string ConvertIcon => IsConvertEnabled ? "&#xE8fE;" : "&#xE8A1;";
+        public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "\ue7ac" : "\ue7ba";
+        public string ConvertIcon => IsConvertEnabled ? "\ue8de" : "\ue8f6";
 
         public bool IsScanEnabled => !IsNotConnected;
         public bool IsConvertEnabled => !IsNotConnected;
