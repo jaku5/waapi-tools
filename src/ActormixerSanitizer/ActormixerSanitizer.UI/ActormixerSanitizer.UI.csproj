@@ -26,8 +26,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png" />
-		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor_light.png" />
+		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor.png">
+			<Link>Resources\ObjectIcons_ActorMixer_nor.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor_light.png">
+			<Link>Resources\ObjectIcons_ActorMixer_nor_light.png</Link>
+		</Resource>
 	</ItemGroup>
 
 

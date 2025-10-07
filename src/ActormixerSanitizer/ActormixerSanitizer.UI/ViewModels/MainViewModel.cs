@@ -7,9 +7,10 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows;
 using System.Threading;
+using System.Windows;
 using System.Windows.Input;
+using System.Xml.Linq;
 
 
 namespace ActormixerSanitizer.UI.ViewModels
@@ -19,9 +20,11 @@ namespace ActormixerSanitizer.UI.ViewModels
         private readonly ActormixerSanitizerService _service;
         private readonly ILogger<MainViewModel> _logger;
         private readonly IMessenger _messenger;
+        private CancellationTokenSource _dialogCts = new CancellationTokenSource();
 
         
         private ObservableCollection<ActorMixerInfo> _actorMixers;
+  
         private string _logText = "";
 
         public ICommand ConnectCommand { get; }
@@ -152,21 +155,23 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
-        public string ActorIcon => _isDarkTheme ? "..\\..\\Resources\\ObjectIcons_ActorMixer_nor_light.png" : "..\\..\\Resources\\ObjectIcons_ActorMixer_nor.png";
+        public string ActorIcon => _isDarkTheme ? "pack://application:,,,/ActormixerSanitizer.UI;component/Resources/ObjectIcons_ActorMixer_nor_light.png" : "pack://application:,,,/ActormixerSanitizer.UI;component/Resources/ObjectIcons_ActorMixer_nor.png";
         public string ThemeIcon => _isDarkTheme ? "\uE706" : "\uEC46";
         public string ConnectIcon => IsNotConnected ? "\ueb55" : "\uec64";
         public bool IsConnectIconFilled => IsNotConnected;
         public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "\ue7ac" : "\ue7ba";
-        public string ConvertIcon => IsConvertEnabled ? "\ue8de" : "\ue8f6";
+        public string ConvertIcon => IsConvertEnabled ? "\ue19c" : "\ue8f6";
 
-        public bool IsScanEnabled => !IsNotConnected;
-        public bool IsConvertEnabled => !IsNotConnected;
-        public bool IsShowSelectedListEnabled => !IsNotConnected;
+        public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen;
+        public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen;
+        public bool IsShowSelectedListEnabled => !IsNotConnected && !IsDialogOpen;
 
         private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
         public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger)
         {
+            IsNotConnected = true;
+
             _service = service;
             _logger = logger;
             _messenger = messenger;
@@ -211,21 +216,49 @@ namespace ActormixerSanitizer.UI.ViewModels
 
 
 
-        private void OnNotificationRequested(object sender, string message)
+        private bool _isDialogOpen;
+        public bool IsDialogOpen
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            get => _isDialogOpen;
+            set
+            {
+                if (_isDialogOpen != value)
+                {
+                    _isDialogOpen = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsScanEnabled));
+                    OnPropertyChanged(nameof(IsConvertEnabled));
+                    OnPropertyChanged(nameof(IsShowSelectedListEnabled));
+                }
+            }
+        }
+
+        private async void OnNotificationRequested(object sender, string message)
+        {
+            // Cancel any existing dialog
+            _dialogCts.Cancel();
+            _dialogCts = new CancellationTokenSource();
+            var token = _dialogCts.Token;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 var dialog = new Dialogs.MessageDialog(
                     "Notification",
                     message,
                     Application.Current.MainWindow);
-                dialog.ShowDialog();
+
+                token.Register(() => Application.Current.Dispatcher.Invoke(dialog.Close));
+
+                IsDialogOpen = true;
+                dialog.Closed += (s, e) => IsDialogOpen = false;
+
+                dialog.Show();
             });
         }
 
-        private void OnStatusUpdated(object sender, string message)
+        private async void OnStatusUpdated(object sender, string message)
         {
-            AddLog(message);
+            await Application.Current.Dispatcher.InvokeAsync(() => AddLog(message));
         }
 
         private void AddLog(string message)
@@ -364,6 +397,37 @@ namespace ActormixerSanitizer.UI.ViewModels
         }
 
 
+        private async Task<bool> ShowConfirmationDialog(string title, string message)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+
+            // Cancel any existing dialog
+            _dialogCts.Cancel();
+            _dialogCts = new CancellationTokenSource();
+            var token = _dialogCts.Token;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var dialog = new Dialogs.MessageDialog(title, message, Application.Current.MainWindow, true);
+                token.Register(() =>
+                {
+                    Application.Current.Dispatcher.Invoke(dialog.Close);
+                    tcs.TrySetResult(false); // Treat cancellation as a "No"
+                });
+
+                dialog.Closed += (s, e) =>
+                {
+                    IsDialogOpen = false;
+                    tcs.TrySetResult(dialog.Result ?? false);
+                };
+
+                IsDialogOpen = true;
+                dialog.Show();
+            });
+
+            return await tcs.Task;
+        }
+
         private async Task ConvertAsync()
         {
             await _service.CheckProjectStateAsync();
@@ -379,13 +443,11 @@ namespace ActormixerSanitizer.UI.ViewModels
                 return;
             }
 
-            var confirmDialog = new Dialogs.MessageDialog(
+            var confirmed = await ShowConfirmationDialog(
                 "Confirm Conversion",
-                $"Are you sure you want to convert {selectedActors.Count} actor-mixers?",
-                Application.Current.MainWindow, 
-                true);
+                $"Are you sure you want to convert {selectedActors.Count} actor-mixers?");
 
-            if (confirmDialog.ShowDialog() != true)
+            if (!confirmed)
                 return;
 
             try
@@ -414,19 +476,25 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
-        private void OnDisconnected(object sender, EventArgs e)
+        private async void OnDisconnected(object sender, EventArgs e)
         {
-            AddLog("Disconnected from Wwise");
-            IsNotConnected = true;
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                AddLog("Disconnected from Wwise");
+                IsNotConnected = true;
+            });
         }
 
-        private void OnProjectStateChanged(object sender, EventArgs e)
+        private async void OnProjectStateChanged(object sender, EventArgs e)
         {
-            IsDirty = _service.IsDirty;
-            IsSaved = _service.IsSaved;
-            IsConverted = _service.IsConverted;
-            IsConnectionLost = _service.IsConnectionLost;
-            IsScanned = _service.IsScanned;
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                IsDirty = _service.IsDirty;
+                IsSaved = _service.IsSaved;
+                IsConverted = _service.IsConverted;
+                IsConnectionLost = _service.IsConnectionLost;
+                IsScanned = _service.IsScanned;
+            });
         }
 
         private async Task SelectInWwise(string actorId)
