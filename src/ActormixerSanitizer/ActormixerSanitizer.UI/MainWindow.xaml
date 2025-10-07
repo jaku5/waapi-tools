@@ -96,8 +96,8 @@
 						Width="60"  Height="45" Margin="0,0,0,0"
 						ToolTip="Scan"
                         IsEnabled="{Binding IsScanEnabled}">
-                    <TextBlock Style="{StaticResource FluentIcon}">&#xE8FE;</TextBlock>
-                </Button>
+                        <TextBlock Style="{StaticResource FluentIcon}">&#xE8FE;</TextBlock>
+                    </Button>
                 <Separator Grid.Column="2" Margin="10,0,10,0"/>
                 <StackPanel Grid.Column="3" Orientation="Horizontal">
                     <Button Command="{Binding SelectAllCommand}"
@@ -121,7 +121,7 @@
                 <Button Grid.Column="5" Command="{Binding ShowSelectedListCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
 							ToolTip="Show Selected List"
-                            IsEnabled="{Binding IsShowSelectedListEnabled}">
+                            IsEnabled="{Binding IsSelectionEnabled}">
                     <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ShowSelectedListIcon}"/>
                 </Button>
             </Grid>
@@ -165,7 +165,7 @@
                                 <MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                                 <MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
                                 <Separator/>
-                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" IsEnabled="{Binding PlacementTarget.Tag.IsScanEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" IsEnabled="{Binding PlacementTarget.Tag.IsSelectionEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>

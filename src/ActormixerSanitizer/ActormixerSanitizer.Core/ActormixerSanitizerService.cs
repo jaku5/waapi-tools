@@ -189,29 +189,28 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }).ToList();
         }
 
-        public async Task CheckProjectStateAsync()
+        public async Task<bool> CheckProjectStateAsync()
         {
             // Check project dirty state via ak.wwise.core.getProjectInfo before performing convert actions.
             try
             {
                 var projectInfo = await _client.Call(ak.wwise.@core.getProjectInfo);
 
-                if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == true)
+                var isDirty = projectInfo?["isDirty"]?.Value<bool>() ?? false;
+
+                if (_isDirty != isDirty)
                 {
-                    _isDirty = true;
+                    _isDirty = isDirty;
                     ProjectStateChanged?.Invoke(this, EventArgs.Empty);
                 }
 
-                else if (projectInfo != null && projectInfo["isDirty"]?.Value<bool>() == false)
-                {
-                    _isDirty = false;
-                    ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-                }
+                return isDirty;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking project info");
                 NotificationRequested?.Invoke(this, $"Error checking project info: {ex.Message}");
+                return true;
             }
         }
 

@@ -81,8 +81,11 @@ namespace ActormixerSanitizer.UI.ViewModels
                 OnPropertyChanged(nameof(ShowSelectedListIcon));
                 OnPropertyChanged(nameof(ConvertIcon));
                 OnPropertyChanged(nameof(IsConnectIconFilled));
+                OnPropertyChanged(nameof(IsSelectionEnabled));
             }
         }
+
+        public bool IsRescanRequired => IsDirty || IsSaved || IsConverted;
 
         private bool _isDirty;
         public bool IsDirty
@@ -92,6 +95,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isDirty = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsSelectionEnabled));
+                OnPropertyChanged(nameof(IsRescanRequired));
             }
         }
 
@@ -103,6 +108,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isSaved = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsSelectionEnabled));
+                OnPropertyChanged(nameof(IsRescanRequired));
             }
         }
 
@@ -114,6 +121,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isConverted = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsSelectionEnabled));
+                OnPropertyChanged(nameof(IsRescanRequired));
             }
         }
 
@@ -163,6 +172,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         public string ConvertIcon => IsConvertEnabled ? "\ue19c" : "\ue8f6";
 
         public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen;
+        public bool IsSelectionEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted;
         public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen;
         public bool IsShowSelectedListEnabled => !IsNotConnected && !IsDialogOpen;
 
@@ -229,6 +239,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                     OnPropertyChanged(nameof(IsScanEnabled));
                     OnPropertyChanged(nameof(IsConvertEnabled));
                     OnPropertyChanged(nameof(IsShowSelectedListEnabled));
+                    OnPropertyChanged(nameof(IsSelectionEnabled));
                 }
             }
         }
@@ -267,23 +278,10 @@ namespace ActormixerSanitizer.UI.ViewModels
             _logger.LogInformation(message);
         }
 
-        private bool IsReadyForScan()
-        {
-            if (IsDirty)
-            {
-                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before scanning.");
-                return false;
-            }
-            return true;
-        }
+
 
         private bool IsReadyForConvert()
         {
-            if (IsDirty)
-            {
-                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before converting.");
-                return false;
-            }
             if (IsSaved)
             {
                 OnNotificationRequested(this, "Project has been saved. Please scan again before converting.");
@@ -326,10 +324,11 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async Task ScanAsync()
         {
-            await _service.CheckProjectStateAsync();
-
-            if (!IsReadyForScan())
+            if (await _service.CheckProjectStateAsync())
+            {
+                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before scanning.");
                 return;
+            }
 
             try
             {
@@ -430,7 +429,11 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async Task ConvertAsync()
         {
-            await _service.CheckProjectStateAsync();
+            if (await _service.CheckProjectStateAsync())
+            {
+                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before converting.");
+                return;
+            }
 
             if (!IsReadyForConvert())
                 return;
