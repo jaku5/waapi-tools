@@ -161,11 +161,27 @@
                             <ContextMenu>
                                 <MenuItem Header="{Binding Name}" IsEnabled="False"/>
                                 <Separator/>
-                                <MenuItem Header="Copy name" Command="{Binding PlacementTarget.Tag.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="Copy name" Command="{Binding PlacementTarget.Tag.CopyNameCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Style="{StaticResource FluentIcon}">&#xE16F;</TextBlock>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Copy id" Command="{Binding PlacementTarget.Tag.CopyIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Style="{StaticResource FluentIcon}">&#xE16F;</TextBlock>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Copy path" Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Style="{StaticResource FluentIcon}">&#xE16F;</TextBlock>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                                 <Separator/>
-                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" IsEnabled="{Binding PlacementTarget.Tag.IsSelectionEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="Select in Wwise" Command="{Binding PlacementTarget.Tag.SelectInWwiseCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" IsEnabled="{Binding PlacementTarget.Tag.IsSelectionEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                    <MenuItem.Icon>
+                                        <TextBlock Style="{StaticResource FluentIcon}">&#xE2B4;</TextBlock>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
