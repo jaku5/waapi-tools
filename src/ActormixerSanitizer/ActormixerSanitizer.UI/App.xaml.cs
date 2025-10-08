@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.Windows;
+using System.Windows.Media;
 
 
 //using Wpf.Ui.Contracts;
@@ -29,6 +30,9 @@ namespace ActormixerSanitizer.UI
             mainWindow.DataContext = _serviceProvider.GetRequiredService<MainViewModel>();
 
             mainWindow.Show();
+
+            SetTheme(IsDarkModeEnabled());
+            SystemEvents.UserPreferenceChanged += (s, e) => SetTheme(IsDarkModeEnabled());
         }
 
         private void ConfigureServices(IServiceCollection services)
@@ -74,7 +78,9 @@ namespace ActormixerSanitizer.UI
 
         public static void SetTheme(bool isDark)
         {
+#pragma warning disable WPF0001
             Application.Current.ThemeMode = isDark ? ThemeMode.Dark : ThemeMode.Light;
+#pragma warning restore WPF0001
         }
     }
 }
