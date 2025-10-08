@@ -261,7 +261,11 @@ namespace ActormixerSanitizer.UI.ViewModels
                 token.Register(() => Application.Current.Dispatcher.Invoke(dialog.Close));
 
                 IsDialogOpen = true;
-                dialog.Closed += (s, e) => IsDialogOpen = false;
+                dialog.Closed += (s, e) =>
+                {
+                    IsDialogOpen = false;
+                    Application.Current.MainWindow.Activate();
+                };
 
                 dialog.Show();
             });
@@ -418,6 +422,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                 {
                     IsDialogOpen = false;
                     tcs.TrySetResult(dialog.Result ?? false);
+                    Application.Current.MainWindow.Activate();
                 };
 
                 IsDialogOpen = true;
