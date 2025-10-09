@@ -216,11 +216,11 @@
         <Button Grid.Row="5" Command="{Binding ConvertCommand}"
 			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
 			ToolTip="Convert Selected to Folders"
-			IsEnabled="{Binding IsConvertEnabled}">
+			IsEnabled="{Binding IsSelectionEnabled}">
             <StackPanel Orientation="Horizontal">
-                <Image Source="{Binding ActorIcon}" Margin="0,0,30,0" Width="24" Height="24"/>
+                <Image Source="{Binding ActorIcon}" Margin="0,0,30,0" Width="24" Height="24" Visibility="{Binding IsSelectionEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConvertIcon}"/>
-                <Image Source="{Binding FolderIcon}" Margin="30,0,0,0" Width="24" Height="24"/>
+                <Image Source="{Binding FolderIcon}" Margin="30,0,0,0" Width="24" Height="24" Visibility="{Binding IsSelectionEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </StackPanel>
         </Button>
 

@@ -95,6 +95,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isDirty = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ConvertIcon));
                 OnPropertyChanged(nameof(IsSelectionEnabled));
                 OnPropertyChanged(nameof(IsRescanRequired));
             }
@@ -108,6 +109,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isSaved = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ConvertIcon));
                 OnPropertyChanged(nameof(IsSelectionEnabled));
                 OnPropertyChanged(nameof(IsRescanRequired));
             }
@@ -121,6 +123,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isConverted = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ConvertIcon));
                 OnPropertyChanged(nameof(IsSelectionEnabled));
                 OnPropertyChanged(nameof(IsRescanRequired));
             }
@@ -145,6 +148,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isScanned = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ConvertIcon));
             }
         }
 
@@ -171,7 +175,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         public string ConnectIcon => IsNotConnected ? "\ueb55" : "\uec64";
         public bool IsConnectIconFilled => IsNotConnected;
         public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "\ue7ac" : "\ue7ba";
-        public string ConvertIcon => IsConvertEnabled ? "\uf5b0" : "\ue7ba";
+        public string ConvertIcon => IsSelectionEnabled ? "\uf5b0" : "\ue7ba";
 
         public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen;
         public bool IsSelectionEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted;
