@@ -31,6 +31,12 @@
 		<Resource Include="..\..\Resources\ObjectIcons_ActorMixer_nor_light.png">
 			<Link>Resources\ObjectIcons_ActorMixer_nor_light.png</Link>
 		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_Folder_nor.png">
+			<Link>Resources\ObjectIcons_Folder_nor.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_Folder_nor_light.png">
+			<Link>Resources\ObjectIcons_Folder_nor_light.png</Link>
+		</Resource>
 	</ItemGroup>
 
 

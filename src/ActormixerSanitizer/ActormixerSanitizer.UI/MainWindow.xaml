@@ -217,7 +217,11 @@
 			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
 			ToolTip="Convert Selected to Folders"
 			IsEnabled="{Binding IsConvertEnabled}">
-            <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConvertIcon}"/>
+            <StackPanel Orientation="Horizontal">
+                <Image Source="{Binding ActorIcon}" Margin="0,0,30,0" Width="24" Height="24"/>
+                <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConvertIcon}"/>
+                <Image Source="{Binding FolderIcon}" Margin="30,0,0,0" Width="24" Height="24"/>
+            </StackPanel>
         </Button>
 
         

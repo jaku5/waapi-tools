@@ -159,17 +159,19 @@ namespace ActormixerSanitizer.UI.ViewModels
                     _isDarkTheme = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ActorIcon));
+                    OnPropertyChanged(nameof(FolderIcon));
                     OnPropertyChanged(nameof(ThemeIcon));
                 }
             }
         }
 
         public string ActorIcon => _isDarkTheme ? "pack://application:,,,/ActormixerSanitizer.UI;component/Resources/ObjectIcons_ActorMixer_nor_light.png" : "pack://application:,,,/ActormixerSanitizer.UI;component/Resources/ObjectIcons_ActorMixer_nor.png";
+        public string FolderIcon => _isDarkTheme ? "pack://application:,,,/ActormixerSanitizer.UI;component/Resources/ObjectIcons_Folder_nor_light.png" : "pack://application:,,,/ActormixerSanitizer.UI;component/Resources/ObjectIcons_Folder_nor.png";
         public string ThemeIcon => _isDarkTheme ? "\uE706" : "\uEC46";
         public string ConnectIcon => IsNotConnected ? "\ueb55" : "\uec64";
         public bool IsConnectIconFilled => IsNotConnected;
         public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "\ue7ac" : "\ue7ba";
-        public string ConvertIcon => IsConvertEnabled ? "\ue19c" : "\ue8f6";
+        public string ConvertIcon => IsConvertEnabled ? "\uf5b0" : "\ue7ba";
 
         public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen;
         public bool IsSelectionEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted;
