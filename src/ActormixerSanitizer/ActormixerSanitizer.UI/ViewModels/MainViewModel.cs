@@ -22,9 +22,9 @@ namespace ActormixerSanitizer.UI.ViewModels
         private readonly IMessenger _messenger;
         private CancellationTokenSource _dialogCts = new CancellationTokenSource();
 
-        
+
         private ObservableCollection<ActorMixerInfo> _actorMixers;
-  
+
         private string _logText = "";
 
         public ICommand ConnectCommand { get; }
@@ -252,28 +252,21 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnNotificationRequested(object sender, string message)
         {
-            // Cancel any existing dialog
-            _dialogCts.Cancel();
-            _dialogCts = new CancellationTokenSource();
-            var token = _dialogCts.Token;
-
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
+                if (Application.Current.MainWindow.WindowState == WindowState.Minimized)
+                {
+                    Application.Current.MainWindow.WindowState = WindowState.Normal;
+                }
                 var dialog = new Dialogs.MessageDialog(
                     "Notification",
                     message,
                     Application.Current.MainWindow);
 
-                token.Register(() => Application.Current.Dispatcher.Invoke(dialog.Close));
-
                 IsDialogOpen = true;
-                dialog.Closed += (s, e) =>
-                {
-                    IsDialogOpen = false;
-                    Application.Current.MainWindow.Activate();
-                };
-
-                dialog.Show();
+                dialog.ShowDialog();
+                IsDialogOpen = false;
+                Application.Current.MainWindow.Activate();
             });
         }
 
@@ -408,34 +401,22 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async Task<bool> ShowConfirmationDialog(string title, string message)
         {
-            var tcs = new TaskCompletionSource<bool>();
-
-            // Cancel any existing dialog
-            _dialogCts.Cancel();
-            _dialogCts = new CancellationTokenSource();
-            var token = _dialogCts.Token;
-
+            bool? result = false;
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
+                if (Application.Current.MainWindow.WindowState == WindowState.Minimized)
+                {
+                    Application.Current.MainWindow.WindowState = WindowState.Normal;
+                }
                 var dialog = new Dialogs.MessageDialog(title, message, Application.Current.MainWindow, true);
-                token.Register(() =>
-                {
-                    Application.Current.Dispatcher.Invoke(dialog.Close);
-                    tcs.TrySetResult(false); // Treat cancellation as a "No"
-                });
-
-                dialog.Closed += (s, e) =>
-                {
-                    IsDialogOpen = false;
-                    tcs.TrySetResult(dialog.Result ?? false);
-                    Application.Current.MainWindow.Activate();
-                };
 
                 IsDialogOpen = true;
-                dialog.Show();
+                result = dialog.ShowDialog();
+                IsDialogOpen = false;
+                Application.Current.MainWindow.Activate();
             });
 
-            return await tcs.Task;
+            return result ?? false;
         }
 
         private async Task ConvertAsync()

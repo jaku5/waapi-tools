@@ -3,9 +3,7 @@ using System.Windows;
 namespace ActormixerSanitizer.UI.Dialogs
 {
     public partial class MessageDialog : Window
-    { 
-        public bool? Result { get; private set; }
-
+    {
         public MessageDialog(string title, string message, Window owner)
         {
             InitializeComponent();
@@ -29,14 +27,12 @@ namespace ActormixerSanitizer.UI.Dialogs
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            Result = true;
-            Close();
+            DialogResult = true;
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            Result = false;
-            Close();
+            DialogResult = false;
         }
     }
 }
