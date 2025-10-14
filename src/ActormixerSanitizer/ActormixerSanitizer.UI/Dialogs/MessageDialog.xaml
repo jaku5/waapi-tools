@@ -9,11 +9,11 @@
         ShowInTaskbar="False">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0"
-                  CornerRadius="5"
-                  GlassFrameThickness="0"
-                  NonClientFrameEdges="None"
-                  ResizeBorderThickness="0"
-                  UseAeroCaptionButtons="False" />
+                      CornerRadius="5"
+                      GlassFrameThickness="0"
+                      NonClientFrameEdges="None"
+                      ResizeBorderThickness="0"
+                      UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
     <Window.Resources>
         <Style x:Key="ButtonFocusVisualStyle">
@@ -34,20 +34,22 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Background="{DynamicResource LayerFillColorAltBrush}">
+        <Border Grid.Row="0" Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}" />
+        <Border Grid.Row="1" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
+        <Grid Grid.Row="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock x:Name="TitleTextBlock" Grid.Row="0" Text="Actor-mixer Sanitizer" FontSize="22" FontWeight="SemiBold" Margin="25,22,0,22" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-            <TextBlock x:Name="MessageTextBlock" Grid.Row="1" Margin="25,0,0,28" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBlock x:Name="TitleTextBlock" Grid.Row="0" Text="Actor-mixer Sanitizer" FontSize="22" FontWeight="SemiBold" Margin="25,22,0,12" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBlock x:Name="MessageTextBlock" Grid.Row="1" Margin="25,0,25,24" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
         </Grid>
-        <Grid Grid.Row="1" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" Margin="20,24,20,24">
+        <Grid Grid.Row="1" Margin="20,24,20,24">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Content="OK" Margin="4,0,4,0" Padding="10,5" Click="OkButton_Click" IsDefault="True" HorizontalAlignment="Stretch">
+            <Button Grid.Column="0" Content="OK" Margin="4,0,4,1" Padding="10,5" Height="32" Click="OkButton_Click" IsDefault="True" HorizontalAlignment="Stretch">
                 <Button.Style>
                     <Style TargetType="Button">
                         <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
@@ -95,7 +97,7 @@
                     </Style>
                 </Button.Style>
             </Button>
-            <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Margin="4,0,4,0" Padding="10,5" Click="CancelButton_Click" IsCancel="True" HorizontalAlignment="Stretch">
+            <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Margin="4,0,4,1" Padding="10,5" Height="32" Click="CancelButton_Click" IsCancel="True" HorizontalAlignment="Stretch">
             </Button>
         </Grid>
     </Grid>
