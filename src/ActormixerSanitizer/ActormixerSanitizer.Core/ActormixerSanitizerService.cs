@@ -219,14 +219,19 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             IsConverting = true;
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
-            foreach (var actor in actors)
+            var sortedActors = actors.OrderBy(a => a.Path.Count(c => c == '\\')).ToList();
+
+            foreach (var actor in sortedActors)
             {
                 _logger.LogInformation($"Converting: {actor.Name}");
                 StatusUpdated?.Invoke(this, $"Converting: {actor.Name}");
                 var tempName = $"{actor.Name}Temp";
 
+                var lastBackslash = actor.Path.LastIndexOf('\\');
+                var parentPath = actor.Path.Substring(0, lastBackslash);
+
                 await _client.Call(ak.wwise.core.@object.create, new JObject(
-                    new JProperty("parent", actor.ParentId),
+                    new JProperty("parent", parentPath),
                     new JProperty("type", "Folder"),
                     new JProperty("name", tempName),
                     new JProperty("notes", actor.Notes)));
