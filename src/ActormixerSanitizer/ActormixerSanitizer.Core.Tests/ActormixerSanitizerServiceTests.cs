@@ -264,29 +264,27 @@ new JProperty("id", ancestorId),
       var actorMixerId = "{A5A7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
       var actorMixersResult = new JObject(
         new JProperty("return", new JArray(
-      new JObject(
-           new JProperty("id", actorMixerId),
-             new JProperty("name", "TestMixer"),
-             new JProperty("path", "\\Test\\TestMixer"),
-     new JProperty("parent.id", "{C5C7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}"),
-           new JProperty("notes", ""),
-              new JProperty("Volume", 0),
-    new JProperty("Pitch", 0),
-               new JProperty("Lowpass", 0),
-     new JProperty("Highpass", 0),
-        new JProperty("MakeUpGain", 0)
-            )
-            ))
-            );
+          new JObject(
+            new JProperty("id", actorMixerId),
+            new JProperty("name", "TestMixer"),
+            new JProperty("path", "\\Test\\TestMixer"),
+            new JProperty("parent.id", "{C5C7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}"),
+            new JProperty("notes", ""),
+            new JProperty("Volume", 0),
+            new JProperty("Pitch", 0),
+            new JProperty("Lowpass", 0),
+            new JProperty("Highpass", 0),
+            new JProperty("MakeUpGain", 0)))));
 
       // Ancestor returns empty - simulates lookup failure
       var emptyAncestorResult = new JObject(new JProperty("return", new JArray()));
       var stateGroupResult = new JObject(new JProperty("return", new JArray()));
 
-      SetupWaapiCallsForTest(actorMixersResult, emptyAncestorResult, new JObject(new JProperty("properties", new JArray())),
-new JObject(new JProperty("return", new JArray())),
- new JObject(new JProperty("return", new JArray())),
-stateGroupResult);
+      SetupWaapiCallsForTest(actorMixersResult, emptyAncestorResult, 
+      new JObject(new JProperty("properties", new JArray())),
+      new JObject(new JProperty("return", new JArray())),
+      new JObject(new JProperty("return", new JArray())),
+      stateGroupResult);
 
       // Act
       var result = await _service!.GetSanitizableMixersAsync();
@@ -356,7 +354,7 @@ stateGroupResult);
 
       var referencesResult = new JObject(new JProperty("return", new JArray(
         new JObject(new JProperty("id", "{EventAction1}")))));
-        
+
       var stateGroupResult = new JObject(new JProperty("return", new JArray()));
 
       SetupWaapiCallsForTest(actorMixersResult, ancestorResult, diffResult, rtpcResult, referencesResult, stateGroupResult);
@@ -394,6 +392,179 @@ stateGroupResult);
 
       // Assert
       Assert.True(_service.IsConnectionLost);
+    }
+
+    [Fact]
+    public async Task ConvertToFoldersAsync_WhenCalled_PerformsConversionSteps()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var childId = "{CHILD-1}";
+      SetupConversionMocks(new[] { childId });
+
+      var actors = new List<ActorMixerInfo>
+      {
+        new ActorMixerInfo
+        {
+            Id = "{AM-1}",
+            Name = "Mixer1",
+            Path = "\\Actor-Mixer Hierarchy\\Default Work Unit\\Mixer1",
+            Notes = "Note1"
+        }
+      };
+
+      // Act
+      await _service!.ConvertToFoldersAsync(actors);
+
+      // Assert
+      // 1. Begin Group - Target Overload 1 (object)
+      _clientMock!.Verify(c => c.Call(ak.wwise.core.undo.beginGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+
+      // 2. Create Folder - Check properties on JObject cast
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.create,
+          It.Is<object>(o => o is JObject && ((JObject)o)["type"]!.ToString() == "Folder" && ((JObject)o)["name"]!.ToString() == "Mixer1Temp"),
+          It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+
+      // 3. Move Children
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.move,
+          It.Is<object>(o => o is JObject && ((JObject)o)["object"]!.ToString() == childId),
+          It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+
+      // 4. Delete Original
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.delete,
+          It.Is<object>(o => o is JObject && ((JObject)o)["object"]!.ToString() == "{AM-1}"),
+          It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+
+      // 5. Rename Folder
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.setName,
+          It.Is<object>(o => o is JObject && ((JObject)o)["value"]!.ToString() == "Mixer1"),
+          It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+
+      // 6. End Group
+      _clientMock.Verify(c => c.Call(ak.wwise.core.undo.endGroup,
+          It.Is<object>(o => o is JObject && ((JObject)o)["displayName"] != null),
+          It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+
+      // 7. State
+      Assert.True(_service.IsConverted);
+      Assert.False(_service.IsConverting);
+    }
+
+    [Fact]
+    public async Task ConvertToFoldersAsync_WhenActorHasNoChildren_SkipsMove()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+      SetupConversionMocks(null); // No children
+
+      var actors = new List<ActorMixerInfo>
+      {
+        new ActorMixerInfo { Id = "{AM-1}", Name = "Mixer1", Path = "\\Mixer1" }
+      };
+
+      // Act
+      await _service!.ConvertToFoldersAsync(actors);
+
+      // Assert
+      // Move should never be called
+      _clientMock!.Verify(c => c.Call(ak.wwise.core.@object.move, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Never);
+
+      // Other steps should still happen
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.delete,
+          It.Is<object>(o => o is JObject && ((JObject)o)["object"]!.ToString() == "{AM-1}"),
+          It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConvertToFoldersAsync_WhenWaapiFails_Throws()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      if (_clientMock != null)
+      {
+        // Setup beginGroups to succeed - Target Overload 1
+        _clientMock.Setup(c => c.Call(ak.wwise.core.undo.beginGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+           .ReturnsAsync(new JObject());
+
+        // Make Create throw
+        _clientMock.Setup(c => c.Call(ak.wwise.core.@object.create, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+            .ThrowsAsync(new System.Exception("WAAPI Error"));
+      }
+
+      var actors = new List<ActorMixerInfo>
+      {
+        new ActorMixerInfo { Id = "{AM-1}", Name = "Mixer1", Path = "\\Mixer1" }
+      };
+
+      // Act & Assert
+      await Assert.ThrowsAsync<System.Exception>(() => _service!.ConvertToFoldersAsync(actors));
+    }
+
+    private void SetupConversionMocks(string[]? childIds = null)
+    {
+      if (_clientMock == null) return;
+
+      // Create returns a mock ID - Target Overload 1
+      _clientMock.Setup(c => c.Call(ak.wwise.core.@object.create, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+         .ReturnsAsync(new JObject(new JProperty("id", "{NEW-FOLDER-ID}")));
+
+      // Get Children - Target Overload 2 (Call(string, JObject, JObject, int)) used by QueryWaapiAsync
+      _clientMock.Setup(c => c.Call(ak.wwise.core.@object.get,
+          It.IsAny<JObject>(),
+          It.IsAny<JObject>(),
+          It.IsAny<int>()))
+         .Returns<string, JObject, JObject, int>((uri, args, options, timeout) =>
+         {
+           // Check if this is the "children" query
+           if (args != null && args["waql"] != null && args["waql"]!.ToString().Contains("select children"))
+           {
+             var children = new JArray();
+             if (childIds != null)
+             {
+               foreach (var id in childIds)
+               {
+                 children.Add(new JObject(new JProperty("id", id), new JProperty("name", "Child")));
+               }
+             }
+             return Task.FromResult(new JObject(new JProperty("return", children)));
+           }
+           return Task.FromResult(new JObject(new JProperty("return", new JArray())));
+         });
+
+      // Target Overload 1 (Call(string, object, object, int)) - Safety fallback or if implementation changes
+      _clientMock.Setup(c => c.Call(ak.wwise.core.@object.get,
+          It.IsAny<object>(),
+          It.IsAny<object>(),
+          It.IsAny<int>()))
+         .Returns<string, object, object, int>((uri, args, options, timeout) =>
+         {
+           // Similar logic for fallback
+           var jArgs = args as JObject;
+           if (jArgs != null && jArgs["waql"] != null && jArgs["waql"]!.ToString().Contains("select children"))
+           {
+             var children = new JArray();
+             if (childIds != null)
+             {
+               foreach (var id in childIds)
+               {
+                 children.Add(new JObject(new JProperty("id", id), new JProperty("name", "Child")));
+               }
+             }
+             return Task.FromResult(new JObject(new JProperty("return", children)));
+           }
+           return Task.FromResult(new JObject(new JProperty("return", new JArray())));
+         });
+
+      // Other modification calls matches simple object (Overload 1)
+      var success = new JObject();
+      _clientMock.Setup(c => c.Call(ak.wwise.core.@object.move, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>())).ReturnsAsync(success);
+      _clientMock.Setup(c => c.Call(ak.wwise.core.@object.delete, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>())).ReturnsAsync(success);
+      _clientMock.Setup(c => c.Call(ak.wwise.core.@object.setName, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>())).ReturnsAsync(success);
     }
   }
 }
