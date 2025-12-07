@@ -1,7 +1,9 @@
 using ActormixerSanitizer.UI.Messages;
+using ActormixerSanitizer.UI.Services;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
+using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Collections.ObjectModel;
@@ -17,9 +19,10 @@ namespace ActormixerSanitizer.UI.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly ActormixerSanitizerService _service;
+        private readonly IActormixerSanitizerService _service;
         private readonly ILogger<MainViewModel> _logger;
         private readonly IMessenger _messenger;
+        private readonly IDialogService _dialogService;
         private CancellationTokenSource _dialogCts = new CancellationTokenSource();
 
 
@@ -184,13 +187,14 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
 
-        public MainViewModel(ActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger)
+        public MainViewModel(IActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger, IDialogService dialogService)
         {
             IsNotConnected = true;
 
             _service = service;
             _logger = logger;
             _messenger = messenger;
+            _dialogService = dialogService;
             _service.StatusUpdated += OnStatusUpdated;
             _service.NotificationRequested += OnNotificationRequested;
             _service.Disconnected += OnDisconnected;
@@ -211,15 +215,13 @@ namespace ActormixerSanitizer.UI.ViewModels
             });
             CopyIdCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Id));
             CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
-            SelectInWwiseCommand = new RelayCommand<ActorMixerInfo>(actor => SelectInWwise(actor?.Id));
+            SelectInWwiseCommand = new AsyncRelayCommand<ActorMixerInfo>(async actor => await SelectInWwise(actor?.Id));
             ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
             ThemeChangeCommand = new RelayCommand(ThemeChange);
             ToggleLogViewerCommand = new RelayCommand(ToggleLogViewer);
 
             IsDarkTheme = App.IsDarkModeEnabled();
             App.SetTheme(IsDarkTheme);
-
-            _ = ConnectAsync();
         }
 
         private bool _isLogViewerVisible = false;
@@ -252,22 +254,9 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnNotificationRequested(object sender, string message)
         {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                if (Application.Current.MainWindow.WindowState == WindowState.Minimized)
-                {
-                    Application.Current.MainWindow.WindowState = WindowState.Normal;
-                }
-                var dialog = new Dialogs.MessageDialog(
-                    "Notification",
-                    message,
-                    Application.Current.MainWindow);
-
-                IsDialogOpen = true;
-                dialog.ShowDialog();
-                IsDialogOpen = false;
-                Application.Current.MainWindow.Activate();
-            });
+            IsDialogOpen = true;
+            await _dialogService.ShowNotification("Notification", message);
+            IsDialogOpen = false;
         }
 
         private async void OnStatusUpdated(object sender, string message)
@@ -283,21 +272,21 @@ namespace ActormixerSanitizer.UI.ViewModels
 
 
 
-        private bool IsReadyForConvert()
+        private async Task<bool> IsReadyForConvert()
         {
             if (IsSaved)
             {
-                OnNotificationRequested(this, "Project has been saved. Please scan again before converting.");
+                await _dialogService.ShowNotification("Notification", "Project has been saved. Please scan again before converting.");
                 return false;
             }
             if (IsConverted)
             {
-                OnNotificationRequested(this, "Some objects have been converted. Please scan again to refresh the list.");
+                await _dialogService.ShowNotification("Notification", "Some objects have been converted. Please scan again to refresh the list.");
                 return false;
             }
             if (!IsScanned)
             {
-                OnNotificationRequested(this, "Please scan the project before converting.");
+                await _dialogService.ShowNotification("Notification", "Please scan the project before converting.");
                 return false;
             }
             return true;
@@ -329,7 +318,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         {
             if (await _service.CheckProjectStateAsync())
             {
-                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before scanning.");
+                await _dialogService.ShowNotification("Notification", "Project has unsaved changes. Please save the project in Wwise before scanning.");
                 return;
             }
 
@@ -340,15 +329,23 @@ namespace ActormixerSanitizer.UI.ViewModels
 
                 ActorMixers.Clear();
 
-                foreach (var actor in actors)
+                if (actors != null)
                 {
-                    if (selectedIds.Contains(actor.Id))
+                    foreach (var actor in actors)
                     {
-                        actor.IsSelected = true;
+                        if (selectedIds.Contains(actor.Id))
+                        {
+                            actor.IsSelected = true;
+                        }
+                        ActorMixers.Add(actor);
                     }
-                    ActorMixers.Add(actor);
+                    AddLog($"Found {actors.Count} actor mixers that can be converted");
                 }
-                AddLog($"Found {actors.Count} actor mixers that can be converted");
+                else
+                {
+                    AddLog("Scan returned no mixers.");
+                }
+                IsScanned = true;
             }
             catch (Exception ex)
             {
@@ -398,36 +395,15 @@ namespace ActormixerSanitizer.UI.ViewModels
                 AddLog("Nothing to toggle");
         }
 
-
-        private async Task<bool> ShowConfirmationDialog(string title, string message)
-        {
-            bool? result = false;
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                if (Application.Current.MainWindow.WindowState == WindowState.Minimized)
-                {
-                    Application.Current.MainWindow.WindowState = WindowState.Normal;
-                }
-                var dialog = new Dialogs.MessageDialog(title, message, Application.Current.MainWindow, true);
-
-                IsDialogOpen = true;
-                result = dialog.ShowDialog();
-                IsDialogOpen = false;
-                Application.Current.MainWindow.Activate();
-            });
-
-            return result ?? false;
-        }
-
         private async Task ConvertAsync()
         {
             if (await _service.CheckProjectStateAsync())
             {
-                OnNotificationRequested(this, "Project has unsaved changes. Please save the project in Wwise before converting.");
+                await _dialogService.ShowNotification("Notification", "Project has unsaved changes. Please save the project in Wwise before converting.");
                 return;
             }
 
-            if (!IsReadyForConvert())
+            if (!await IsReadyForConvert())
                 return;
 
             var selectedActors = SelectedActors.ToList();
@@ -438,7 +414,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                 return;
             }
 
-            var confirmed = await ShowConfirmationDialog(
+            var confirmed = await _dialogService.ShowConfirmationDialog(
                 "Confirm Conversion",
                 $"Are you sure you want to convert {selectedActors.Count} actor-mixers?");
 
@@ -454,7 +430,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                     ActorMixers.Remove(actor);
                 }
 
-                OnNotificationRequested(this, $"Successfully converted {selectedActors.Count} actor-mixers.");
+                await _dialogService.ShowNotification("Notification", $"Successfully converted {selectedActors.Count} actor-mixers.");
             }
             catch (Exception ex)
             {

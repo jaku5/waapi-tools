@@ -7,6 +7,7 @@ using System.Windows.Input;
 //using ActormixerSanitizer.Core.Models;
 using ActormixerSanitizer.UI.ViewModels;
 using System.Windows;
+using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models;
 
 
 namespace ActormixerSanitizer.UI

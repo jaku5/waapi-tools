@@ -1,34 +1,37 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-public class ActorMixerInfo : INotifyPropertyChanged
+namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models
 {
-    private bool _isSelected;
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Path { get; set; }
-    public string ParentId { get; set; }
-    public string Notes { get; set; }
-    public string AncestorId { get; set; }
-    public string AncestorName { get; set; }
-
-    public bool IsSelected
+    public class ActorMixerInfo : INotifyPropertyChanged
     {
-        get => _isSelected;
-        set
+        private bool _isSelected;
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Path { get; set; }
+        public string ParentId { get; set; }
+        public string Notes { get; set; }
+        public string AncestorId { get; set; }
+        public string AncestorName { get; set; }
+
+        public bool IsSelected
         {
-            if (_isSelected != value)
+            get => _isSelected;
+            set
             {
-                _isSelected = value;
-                OnPropertyChanged();
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
             }
         }
-    }
 
-    public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
 
-    protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

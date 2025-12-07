@@ -1,0 +1,399 @@
+using Xunit;
+using Moq;
+using Microsoft.Extensions.Logging;
+using JPAudio.WaapiTools.ClientJson;
+using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
+using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
+using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models;
+
+namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Tests
+{
+  public class ActormixerSanitizerServiceTests
+  {
+    private Mock<IJsonClient>? _clientMock;
+    private Mock<ILogger<ActormixerSanitizerService>>? _loggerMock;
+    private ActormixerSanitizerService? _service;
+
+    private void SetupTest()
+    {
+      _clientMock = new Mock<IJsonClient>();
+      _loggerMock = new Mock<ILogger<ActormixerSanitizerService>>();
+      _service = new ActormixerSanitizerService(_clientMock.Object, _loggerMock.Object);
+    }
+
+    private void SetupDefaultMocks()
+    {
+      if (_clientMock == null) return;
+
+      var undoGroupResult = new JObject();
+      var undoEndResult = new JObject();
+      var undoLastResult = new JObject();
+
+      _clientMock.Setup(c => c.Call(ak.wwise.core.undo.beginGroup, It.IsAny<JObject>(), It.IsAny<JObject>(), It.IsAny<int>()))
+        .ReturnsAsync(undoGroupResult);
+      _clientMock.Setup(c => c.Call(ak.wwise.core.undo.endGroup, It.IsAny<JObject>(), It.IsAny<JObject>(), It.IsAny<int>()))
+    .ReturnsAsync(undoEndResult);
+      _clientMock.Setup(c => c.Call(ak.wwise.core.undo.undoLast, It.IsAny<JObject>(), It.IsAny<JObject>(), It.IsAny<int>()))
+        .ReturnsAsync(undoLastResult);
+    }
+
+    private void SetupWaapiCallsForTest(JObject actorMixersResult, JObject ancestorResult, JObject diffResult, JObject rtpcResult, JObject referencesResult, JObject stateGroupResult)
+    {
+      if (_clientMock == null) return;
+
+      _clientMock.Reset();
+
+      _clientMock
+.Setup(c => c.Call(ak.wwise.core.@object.get, It.IsAny<JObject>(), It.IsAny<JObject>(), It.IsAny<int>()))
+   .Returns<string, JObject, JObject, int>((uri, args, options, timeout) =>
+ {
+   var waql = args?["waql"]?.Value<string>() ?? "";
+
+   if (waql.StartsWith("$ from type actormixer"))
+     return Task.FromResult(actorMixersResult);
+   else if (waql.Contains("select ancestors.first"))
+     return Task.FromResult(ancestorResult);
+   else if (waql.Contains("rtpc.any"))
+     return Task.FromResult(rtpcResult);
+   else if (waql.Contains("select referencesTo"))
+     return Task.FromResult(referencesResult);
+   else if (waql.Contains("from type stateGroup"))
+     return Task.FromResult(stateGroupResult);
+
+   return Task.FromResult(new JObject(new JProperty("return", new JArray())));
+ });
+
+      _clientMock
+   .Setup(c => c.Call(ak.wwise.core.@object.diff, It.IsAny<JObject>(), It.IsAny<JObject>(), It.IsAny<int>()))
+    .ReturnsAsync(diffResult);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenWaapiReturnsOneSanitizableMixer_ShouldReturnOneMixer()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var actorMixerId = "{A5A7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var actorMixerName = "MyTestActorMixer";
+      var actorMixerPath = "\\Actor-Mixer Hierarchy\\Default Work Unit\\MyTestActorMixer";
+      var parentId = "{C5C7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var ancestorId = "{D5D7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var ancestorName = "ParentActorMixer";
+
+      var actorMixersResult = new JObject(
+    new JProperty("return", new JArray(
+new JObject(
+  new JProperty("id", actorMixerId),
+new JProperty("name", actorMixerName),
+new JProperty("path", actorMixerPath),
+new JProperty("parent.id", parentId),
+new JProperty("notes", "Some notes"),
+    new JProperty("Volume", 0),
+       new JProperty("Pitch", 0),
+new JProperty("Lowpass", 0),
+ new JProperty("Highpass", 0),
+      new JProperty("MakeUpGain", 0)
+              )
+   ))
+);
+      var ancestorResult = new JObject(
+         new JProperty("return", new JArray(
+    new JObject(
+        new JProperty("id", ancestorId),
+              new JProperty("name", ancestorName)
+            )
+           ))
+              );
+      var diffResult = new JObject(new JProperty("properties", new JArray()));
+      var rtpcResult = new JObject(new JProperty("return", new JArray()));
+      var referencesResult = new JObject(new JProperty("return", new JArray()));
+      var stateGroupResult = new JObject(new JProperty("return", new JArray()));
+
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, diffResult, rtpcResult, referencesResult, stateGroupResult);
+
+      // Act
+      var result = await _service.GetSanitizableMixersAsync();
+
+      // Assert
+      Assert.Single(result);
+      var mixerInfo = result.First();
+      Assert.Equal(actorMixerId, mixerInfo.Id);
+      Assert.Equal(actorMixerName, mixerInfo.Name);
+      Assert.Equal(actorMixerPath, mixerInfo.Path);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenMixerHasActiveRtpc_ShouldReturnEmptyList()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var actorMixerId = "{A5A7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var actorMixerName = "MyTestActorMixer";
+      var actorMixerPath = "\\Actor-Mixer Hierarchy\\Default Work Unit\\MyTestActorMixer";
+      var parentId = "{C5C7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var ancestorId = "{D5D7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var ancestorName = "ParentActorMixer";
+
+      var actorMixersResult = new JObject(
+     new JProperty("return", new JArray(
+new JObject(
+new JProperty("id", actorMixerId),
+new JProperty("name", actorMixerName),
+new JProperty("path", actorMixerPath),
+new JProperty("parent.id", parentId),
+new JProperty("notes", "Some notes"),
+    new JProperty("Volume", 0),
+new JProperty("Pitch", 0),
+new JProperty("Lowpass", 0),
+new JProperty("Highpass", 0),
+new JProperty("MakeUpGain", 0)
+)
+))
+);
+      var ancestorResult = new JObject(
+         new JProperty("return", new JArray(
+              new JObject(
+              new JProperty("id", ancestorId),
+       new JProperty("name", ancestorName)
+            )
+               ))
+          );
+      var diffResult = new JObject(new JProperty("properties", new JArray()));
+      var rtpcResult = new JObject(new JProperty("return", new JArray(new JObject(new JProperty("id", actorMixerId)))));
+      var referencesResult = new JObject(new JProperty("return", new JArray()));
+      var stateGroupResult = new JObject(new JProperty("return", new JArray()));
+
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, diffResult, rtpcResult, referencesResult, stateGroupResult);
+
+      // Act
+      var result = await _service.GetSanitizableMixersAsync();
+
+      // Assert
+      Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenMixerIsReferencedByEvent_ShouldReturnEmptyList()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var actorMixerId = "{A5A7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var actorMixerName = "MyTestActorMixer";
+      var actorMixerPath = "\\Actor-Mixer Hierarchy\\Default Work Unit\\MyTestActorMixer";
+      var parentId = "{C5C7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var ancestorId = "{D5D7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var ancestorName = "ParentActorMixer";
+
+      var actorMixersResult = new JObject(
+         new JProperty("return", new JArray(
+           new JObject(
+       new JProperty("id", actorMixerId),
+       new JProperty("name", actorMixerName),
+                   new JProperty("path", actorMixerPath),
+    new JProperty("parent.id", parentId),
+           new JProperty("notes", "Some notes"),
+        new JProperty("Volume", 0),
+    new JProperty("Pitch", 0),
+      new JProperty("Lowpass", 0),
+          new JProperty("Highpass", 0),
+      new JProperty("MakeUpGain", 0)
+       )
+     ))
+              );
+      var ancestorResult = new JObject(
+      new JProperty("return", new JArray(
+    new JObject(
+new JProperty("id", ancestorId),
+       new JProperty("name", ancestorName)
+      )
+ ))
+);
+      var diffResult = new JObject(new JProperty("properties", new JArray()));
+      var rtpcResult = new JObject(new JProperty("return", new JArray()));
+      var referencesResult = new JObject(new JProperty("return", new JArray(new JObject(new JProperty("id", "{E5E7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}")))));
+      var stateGroupResult = new JObject(new JProperty("return", new JArray()));
+
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, diffResult, rtpcResult, referencesResult, stateGroupResult);
+
+      // Act
+      var result = await _service.GetSanitizableMixersAsync();
+
+      // Assert
+      Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenNoActorsFound_ReturnsEmptyList()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var emptyResult = new JObject(new JProperty("return", new JArray()));
+      var ancestorResult = new JObject(new JProperty("return", new JArray()));
+      var stateGroupResult = new JObject(new JProperty("return", new JArray()));
+
+      SetupWaapiCallsForTest(emptyResult, ancestorResult, new JObject(new JProperty("properties", new JArray())),
+                     new JObject(new JProperty("return", new JArray())),
+         new JObject(new JProperty("return", new JArray())),
+           stateGroupResult);
+
+      // Act
+      var result = await _service!.GetSanitizableMixersAsync();
+
+      // Assert
+      Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenAncestorLookupFails_SkipsActor()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var actorMixerId = "{A5A7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}";
+      var actorMixersResult = new JObject(
+        new JProperty("return", new JArray(
+      new JObject(
+           new JProperty("id", actorMixerId),
+             new JProperty("name", "TestMixer"),
+             new JProperty("path", "\\Test\\TestMixer"),
+     new JProperty("parent.id", "{C5C7B1B1-1B1B-1B1B-1B1B-1B1B1B1B1B1B}"),
+           new JProperty("notes", ""),
+              new JProperty("Volume", 0),
+    new JProperty("Pitch", 0),
+               new JProperty("Lowpass", 0),
+     new JProperty("Highpass", 0),
+        new JProperty("MakeUpGain", 0)
+            )
+            ))
+            );
+
+      // Ancestor returns empty - simulates lookup failure
+      var emptyAncestorResult = new JObject(new JProperty("return", new JArray()));
+      var stateGroupResult = new JObject(new JProperty("return", new JArray()));
+
+      SetupWaapiCallsForTest(actorMixersResult, emptyAncestorResult, new JObject(new JProperty("properties", new JArray())),
+new JObject(new JProperty("return", new JArray())),
+ new JObject(new JProperty("return", new JArray())),
+stateGroupResult);
+
+      // Act
+      var result = await _service!.GetSanitizableMixersAsync();
+
+      // Assert - actor should be skipped due to no ancestor
+      Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenMultipleMixersWithMixedCriteria_FiltersProperly()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var sanitizableId = "{A1A1A1A1-A1A1-A1A1-A1A1-A1A1A1A1A1A1}";
+      var rtpcId = "{B2B2B2B2-B2B2-B2B2-B2B2-B2B2B2B2B2B2}";
+      var referenceId = "{C3C3C3C3-C3C3-C3C3-C3C3-C3C3C3C3C3C3}";
+
+      var actorMixersResult = new JObject(
+        new JProperty("return", new JArray(
+          // Sanitizable mixer
+          new JObject(
+            new JProperty("id", sanitizableId),
+            new JProperty("name", "SanitizableMixer"),
+            new JProperty("path", "\\Test\\Sanitizable"),
+            new JProperty("parent.id", "{Parent1}"),
+            new JProperty("notes", ""),
+            new JProperty("Volume", 0),
+            new JProperty("Pitch", 0),
+            new JProperty("Lowpass", 0),
+            new JProperty("Highpass", 0),
+            new JProperty("MakeUpGain", 0)),
+          // Mixer with RTPC
+          new JObject(
+            new JProperty("id", rtpcId),
+            new JProperty("name", "RtpcMixer"),
+            new JProperty("path", "\\Test\\Rtpc"),
+            new JProperty("parent.id", "{Parent2}"),
+            new JProperty("notes", ""),
+            new JProperty("Volume", 0),
+            new JProperty("Pitch", 0),
+            new JProperty("Lowpass", 0),
+            new JProperty("Highpass", 0),
+            new JProperty("MakeUpGain", 0)
+             ),
+          // Mixer with references
+          new JObject(
+            new JProperty("id", referenceId),
+            new JProperty("name", "ReferencedMixer"),
+            new JProperty("path", "\\Test\\Referenced"),
+            new JProperty("parent.id", "{Parent3}"),
+            new JProperty("notes", ""),
+            new JProperty("Volume", 0),
+            new JProperty("Pitch", 0),
+            new JProperty("Lowpass", 0),
+            new JProperty("Highpass", 0),
+            new JProperty("MakeUpGain", 0)))));
+
+      var ancestorResult = new JObject(
+        new JProperty("return", new JArray(
+          new JObject(new JProperty("id", "{Ancestor1}"), new JProperty("name", "Ancestor")))));
+
+      var diffResult = new JObject(new JProperty("properties", new JArray()));
+      var rtpcResult = new JObject(new JProperty("return", new JArray(
+         new JObject(new JProperty("id", rtpcId)))));
+
+      var referencesResult = new JObject(new JProperty("return", new JArray(
+        new JObject(new JProperty("id", "{EventAction1}")))));
+        
+      var stateGroupResult = new JObject(new JProperty("return", new JArray()));
+
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, diffResult, rtpcResult, referencesResult, stateGroupResult);
+
+      // Act
+      var result = await _service!.GetSanitizableMixersAsync();
+
+      // Assert - all three should be filtered due to criteria issues
+      // After analysis of the filter logic, actors with RTPC and references should be excluded
+      Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WhenCalled_ResetsIsScanned()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      // Act
+      await _service!.ConnectAsync();
+
+      // Assert
+      Assert.False(_service.IsScanned);
+    }
+
+    [Fact]
+    public void Disconnect_WhenCalled_SetsConnectionLost()
+    {
+      // Arrange
+      SetupTest();
+
+      // Act
+      _service!.Disconnect();
+
+      // Assert
+      Assert.True(_service.IsConnectionLost);
+    }
+  }
+}

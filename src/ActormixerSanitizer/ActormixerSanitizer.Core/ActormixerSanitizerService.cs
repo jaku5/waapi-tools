@@ -1,12 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using JPAudio.WaapiTools.ClientJson;
+using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models;
 
 namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 {
-    public class ActormixerSanitizerService
+    public class ActormixerSanitizerService : IActormixerSanitizerService
     {
-        private readonly JsonClient _client;
+        private readonly IJsonClient _client;
         private readonly ILogger<ActormixerSanitizerService> _logger;
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
@@ -123,9 +124,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             _subscriptionIds.Clear();
         }
 
-        public ActormixerSanitizerService(ILogger<ActormixerSanitizerService> logger)
+        public ActormixerSanitizerService(IJsonClient client, ILogger<ActormixerSanitizerService> logger)
         {
-            _client = new JsonClient();
+            _client = client;
             _client.Disconnected += () => Disconnected?.Invoke(this, EventArgs.Empty);
             _logger = logger;
         }
@@ -280,14 +281,14 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return (query, returnOptions);
         }
 
-        private static async Task<JArray> GetActorMixersAsync(JsonClient client, string query, string[] returnOptions)
+        private static async Task<JArray> GetActorMixersAsync(IJsonClient client, string query, string[] returnOptions)
         {
             JObject result = await QueryWaapiAsync(client, query, returnOptions);
 
             return result[ReturnKey] as JArray;
         }
 
-        private static async Task<JArray> ProcessActorsAsync(JsonClient client, JArray actors)
+        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors)
         {
             var actorsToConvert = new JArray();
 
@@ -304,7 +305,10 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 // TODO: Check if can be simplified
                 JObject ancestorsResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")", new string[] { "id", "name" });
 
-                var ancestorsArray = ancestorsResult[ReturnKey] as JArray;
+                var ancestorsArray = ancestorsResult?[ReturnKey] as JArray;
+
+                if (ancestorsArray == null || !ancestorsArray.Any())
+                    continue;
 
                 var ancestor = ancestorsArray[0];
 
@@ -315,7 +319,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                                                     new JProperty("source", actor["id"]),
                                                     new JProperty("target", ancestor["id"])));
 
-                if (diff["properties"] is JArray diffArray && diffArray.Any())
+                if (diff?["properties"] is JArray diffArray && diffArray.Any())
                 {
                     foreach (var result in diff["properties"])
                     {
@@ -349,11 +353,11 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
                 // Check the actor for active rtpc presence
                 JObject rtpcResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" where rtpc.any(@ControlInput.any())", new string[] { "id" });
-                bool hasActiveRtpcs = rtpcResult[ReturnKey] is JArray rtpcResultArray && rtpcResultArray.Any();
+                bool hasActiveRtpcs = rtpcResult?[ReturnKey] is JArray rtpcResultArray && rtpcResultArray.Any();
 
                 // Check if the actor is referenced by an event action
                 JObject referenceResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select referencesTo where type:\"action\"", new string[] { "id" });
-                bool hasReferences = referenceResult[ReturnKey] is JArray referenceResultArray && referenceResultArray.Any();
+                bool hasReferences = referenceResult?[ReturnKey] is JArray referenceResultArray && referenceResultArray.Any();
 
                 // Create a list of actors to convert 
                 if (!hasDiffProperties && !hasDiffUnityProperties && !hasActiveRtpcs && !hasReferences)
@@ -372,7 +376,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return actorsToConvert;
         }
 
-        private static async Task RemoveActorsWithActiveStates(JsonClient client, JArray actorsToConvert)
+        private static async Task RemoveActorsWithActiveStates(IJsonClient client, JArray actorsToConvert)
         {
             // Check if any state is present in the actor-mixers and create a temporary query if so
             // TODO: Improve waql query to check for active states only in the actor-mixer without unity properties diff
@@ -402,7 +406,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
         }
 
-        private static async Task<JObject> CreateTemporaryQuery(JsonClient client, string actorsToQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")")
+        private static async Task<JObject> CreateTemporaryQuery(IJsonClient client, string actorsToQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")")
         {
             return await client.Call(ak.wwise.core.@object.create, new JObject(
                 new JProperty("parent", "\\Queries\\Default Work Unit"),
@@ -413,7 +417,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 new JProperty("@WAQL", actorsToQuery)));
         }
 
-        private static async Task CreateTemporarySearchCriteria(JsonClient client, JObject stateReference, string parentQueryId)
+        private static async Task CreateTemporarySearchCriteria(IJsonClient client, JObject stateReference, string parentQueryId)
         {
             foreach (JToken result in stateReference[ReturnKey])
             {
@@ -428,7 +432,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
         }
 
-        private static async Task<JObject> QueryWaapiAsync(JsonClient client, string waql, string[] returnFields)
+        private static async Task<JObject> QueryWaapiAsync(IJsonClient client, string waql, string[] returnFields)
         {
             var query = new JObject(new JProperty(WaqlKey, waql));
             var options = new JObject(new JProperty(ReturnKey, returnFields));

@@ -1,6 +1,7 @@
 ﻿using ActormixerSanitizer.UI.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core;
+using JPAudio.WaapiTools.ClientJson;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -44,7 +45,9 @@ namespace ActormixerSanitizer.UI
 
             services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 
-            services.AddSingleton<ActormixerSanitizerService>();
+            services.AddSingleton<IJsonClient, JsonClient>();
+            services.AddSingleton<IActormixerSanitizerService, ActormixerSanitizerService>();
+            services.AddSingleton<Services.IDialogService, Services.DialogService>();
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<MainWindow>();
         }
@@ -78,9 +81,19 @@ namespace ActormixerSanitizer.UI
 
         public static void SetTheme(bool isDark)
         {
+            try
+            {
 #pragma warning disable WPF0001
-            Application.Current.ThemeMode = isDark ? ThemeMode.Dark : ThemeMode.Light;
+                if (Application.Current != null)
+                {
+                    Application.Current.ThemeMode = isDark ? ThemeMode.Dark : ThemeMode.Light;
+                }
 #pragma warning restore WPF0001
+            }
+            catch
+            {
+                // Silently ignore errors when setting theme (e.g., during tests or headless scenarios)
+            }
         }
     }
 }

@@ -33,7 +33,7 @@ namespace JPAudio.WaapiTools.ClientJson
     /// <summary>
     /// The JsonClient provides an abstraction layer over the base Waapi Client and wraps everything under Newtonsoft.Json.Linq.JObject for convenience.
     /// </summary>
-    public class JsonClient
+    public class JsonClient : IJsonClient
     {
         private Client client = new JPAudio.WaapiTools.ClientCore.Client();
 
