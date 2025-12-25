@@ -343,7 +343,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                         }
                         ActorMixers.Add(actor);
                     }
-                    AddLog($"Found {actors.Count} actor mixers that can be converted");
+                    AddLog($"Found {actors.Count} actor mixer{(actors.Count == 1 ? "" : "s")} that can be converted");
                 }
                 else
                 {
@@ -422,7 +422,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             var confirmed = await _dialogService.ShowConfirmationDialog(
                 "Confirm Conversion",
-                $"Are you sure you want to convert {markedActors.Count} actor-mixers?");
+                $"Are you sure you want to convert {markedActors.Count} actor-mixer{(markedActors.Count == 1 ? "" : "s")}?");
 
             if (!confirmed)
                 return;
@@ -436,7 +436,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                     ActorMixers.Remove(actor);
                 }
 
-                await _dialogService.ShowNotification("Notification", $"Successfully converted {markedActors.Count} actor-mixers.");
+                await _dialogService.ShowNotification("Notification", $"Successfully converted {markedActors.Count} actor-mixer{(markedActors.Count == 1 ? "" : "s")}.");
                 OnPropertyChanged(nameof(IsMarkingEnabled));
                 OnPropertyChanged(nameof(IsShowMarkedListEnabled));
             }
