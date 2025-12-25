@@ -5,7 +5,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models
 {
     public class ActorMixerInfo : INotifyPropertyChanged
     {
-        private bool _isSelected;
+        private bool _isMarked;
         public string Id { get; set; }
         public string Name { get; set; }
         public string Path { get; set; }
@@ -14,14 +14,14 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models
         public string AncestorId { get; set; }
         public string AncestorName { get; set; }
 
-        public bool IsSelected
+        public bool IsMarked
         {
-            get => _isSelected;
+            get => _isMarked;
             set
             {
-                if (_isSelected != value)
+                if (_isMarked != value)
                 {
-                    _isSelected = value;
+                    _isMarked = value;
                     OnPropertyChanged();
                 }
             }

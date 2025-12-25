@@ -116,13 +116,13 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task ConvertCommand_WhenNoActorsSelected_DoesNothing()
+        public async Task ConvertCommand_WhenNoActorsMarked_DoesNothing()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = false }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
@@ -140,14 +140,14 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task ConvertCommand_WhenActorsSelected_CallsServiceWithSelectedActors()
+        public async Task ConvertCommand_WhenActorsMarked_CallsServiceWithMarkedActors()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = true },
-                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsSelected = false }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = true },
+                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
@@ -157,7 +157,7 @@ namespace ActormixerSanitizer.UI.Tests
 
             // Populate the collection
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
-            _viewModel.ActorMixers[0].IsSelected = true;
+            _viewModel.ActorMixers[0].IsMarked = true;
 
             // Act
             await ((IAsyncRelayCommand)_viewModel.ConvertCommand).ExecuteAsync(null);
@@ -169,15 +169,15 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task SelectAllCommand_WhenExecuted_SelectsAllActors()
+        public async Task MarkAllCommand_WhenExecuted_MarksAllActors()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = false },
-                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsSelected = false },
-                new ActorMixerInfo { Id = "3", Name = "Mixer3", IsSelected = false }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = false },
+                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = false },
+                new ActorMixerInfo { Id = "3", Name = "Mixer3", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
@@ -186,21 +186,21 @@ namespace ActormixerSanitizer.UI.Tests
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
 
             // Act
-            ((ICommand)_viewModel.SelectAllCommand).Execute(null);
+            ((ICommand)_viewModel.MarkAllCommand).Execute(null);
 
             // Assert
-            Assert.All(_viewModel.ActorMixers, mixer => Assert.True(mixer.IsSelected));
+            Assert.All(_viewModel.ActorMixers, mixer => Assert.True(mixer.IsMarked));
         }
 
         [Fact]
-        public async Task SelectNoneCommand_WhenExecuted_DeselectsAllActors()
+        public async Task UnmarkAllCommand_WhenExecuted_UnmarksAllActors()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = true },
-                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsSelected = true }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = true },
+                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = true }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
@@ -209,10 +209,10 @@ namespace ActormixerSanitizer.UI.Tests
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
 
             // Act
-            ((ICommand)_viewModel.SelectNoneCommand).Execute(null);
+            ((ICommand)_viewModel.UnmarkAllCommand).Execute(null);
 
             // Assert
-            Assert.All(_viewModel.ActorMixers, mixer => Assert.False(mixer.IsSelected));
+            Assert.All(_viewModel.ActorMixers, mixer => Assert.False(mixer.IsMarked));
         }
 
         [Fact]
@@ -232,7 +232,7 @@ namespace ActormixerSanitizer.UI.Tests
             // Populate and select
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
             var mixerToSelect = _viewModel.ActorMixers[0];
-            mixerToSelect.IsSelected = true;
+            mixerToSelect.IsMarked = true;
 
             // Act
             await ((IAsyncRelayCommand<ActorMixerInfo>)_viewModel.SelectInWwiseCommand).ExecuteAsync(mixerToSelect);
@@ -242,14 +242,14 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task ShowSelectedListCommand_WhenExecuted_CallsServiceShowInListView()
+        public async Task ShowMarkedListCommand_WhenExecuted_CallsServiceShowInListView()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = true },
-                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsSelected = true }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = true },
+                new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = true }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
@@ -258,11 +258,11 @@ namespace ActormixerSanitizer.UI.Tests
 
             // Populate and select
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
-            _viewModel.ActorMixers[0].IsSelected = true;
-            _viewModel.ActorMixers[1].IsSelected = true;
+            _viewModel.ActorMixers[0].IsMarked = true;
+            _viewModel.ActorMixers[1].IsMarked = true;
 
             // Act
-            await ((IAsyncRelayCommand)_viewModel.ShowSelectedListCommand).ExecuteAsync(null);
+            await ((IAsyncRelayCommand)_viewModel.ShowMarkedListCommand).ExecuteAsync(null);
 
             // Assert
             _sanitizerServiceMock.Verify(
@@ -324,13 +324,13 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task ConvertCommand_WhenActorsExistButNoneSelected_IsDisabled()
+        public async Task ConvertCommand_WhenActorsExistButNoneMarked_IsDisabled()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = false }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
@@ -344,20 +344,20 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task ConvertCommand_WhenActorsSelectedAndReady_IsEnabled()
+        public async Task ConvertCommand_WhenActorsMarkedAndReady_IsEnabled()
         {
             // Arrange
             CreateViewModel();
             var mixers = new List<ActorMixerInfo>
             {
-                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsSelected = true }
+                new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = true }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
 
             // Populate and select
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
-            _viewModel.ActorMixers[0].IsSelected = true;
+            _viewModel.ActorMixers[0].IsMarked = true;
             _viewModel.IsNotConnected = false;
 
             // Assert

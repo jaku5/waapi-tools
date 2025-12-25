@@ -47,7 +47,7 @@ namespace ActormixerSanitizer.UI
         {
             if (sender is ListBoxItem item && item.DataContext is ActorMixerInfo actor)
             {
-                actor.IsSelected = !actor.IsSelected;
+                actor.IsMarked = !actor.IsMarked;
                 e.Handled = true;
             }
         }

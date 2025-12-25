@@ -100,29 +100,32 @@
                 </Button>
                 <Separator Grid.Column="2" Margin="10,0,10,0"/>
                 <StackPanel Grid.Column="3" Orientation="Horizontal">
-                    <Button Command="{Binding SelectAllCommand}"
+                    <Button Command="{Binding MarkAllCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
-							ToolTip="Select All">
+							ToolTip="Mark All"
+                            IsEnabled="{Binding IsMarkingEnabled}">
                         <TextBlock Style="{StaticResource FluentIcon}">&#xe8b3;</TextBlock>
                     </Button>
-                    <Button Command="{Binding SelectNoneCommand}"
+                    <Button Command="{Binding UnmarkAllCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
-							ToolTip="Select None">
+							ToolTip="Unmark All"
+                            IsEnabled="{Binding IsMarkingEnabled}">
                         <TextBlock Style="{StaticResource FluentIcon}">&#xe8e6;</TextBlock>
                     </Button>
-                    <Button Command="{Binding ToggleSelectedCommand}"
+                    <Button Command="{Binding ToggleMarkedCommand}"
 							CommandParameter="{Binding ElementName=ActorMixerListBox, Path=SelectedItems}"
 							Width="60" Height="45" Margin="0,0,0,0"
-							ToolTip="Toggle Selected">
+							ToolTip="Toggle Marked for Selection"
+                            IsEnabled="{Binding IsMarkingEnabled}">
                         <TextBlock Style="{StaticResource FluentIcon}">&#xef1f;</TextBlock>
                     </Button>
                 </StackPanel>
                 <Separator Grid.Column="4"  Margin="10,0,10,0"/>
-                <Button Grid.Column="5" Command="{Binding ShowSelectedListCommand}"
+                <Button Grid.Column="5" Command="{Binding ShowMarkedListCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
-							ToolTip="Show Selected List"
-                            IsEnabled="{Binding IsSelectionEnabled}">
-                    <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ShowSelectedListIcon}"/>
+							ToolTip="Show Marked List"
+                            IsEnabled="{Binding IsShowMarkedListEnabled}">
+                    <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ShowMarkedListIcon}"/>
                 </Button>
             </Grid>
 
@@ -211,7 +214,7 @@
                         <Border Padding="2" Margin="2" BorderBrush="LightGray" BorderThickness="0,0,0,0">
                             <DockPanel>
                                 <CheckBox DockPanel.Dock="Left"
-                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          IsChecked="{Binding IsMarked, Mode=TwoWay}"
                                           Margin="0,0,0,0"
                                           Style="{StaticResource GraphicToCheckboxStyle}"/>
                                 <StackPanel>
@@ -234,12 +237,12 @@
 
         <Button Grid.Row="5" Command="{Binding ConvertCommand}"
 			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
-			ToolTip="Convert Selected to Folders"
-			IsEnabled="{Binding IsSelectionEnabled}">
+			ToolTip="Convert Marked to Folders"
+			IsEnabled="{Binding IsMarkingEnabled}">
             <StackPanel Orientation="Horizontal">
-                <Image Source="{Binding ActorIcon}" Margin="0,0,30,0" Width="24" Height="24" Visibility="{Binding IsSelectionEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <Image Source="{Binding ActorIcon}" Margin="0,0,30,0" Width="24" Height="24" Visibility="{Binding IsMarkingEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConvertIcon}"/>
-                <Image Source="{Binding FolderIcon}" Margin="30,0,0,0" Width="24" Height="24" Visibility="{Binding IsSelectionEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <Image Source="{Binding FolderIcon}" Margin="30,0,0,0" Width="24" Height="24" Visibility="{Binding IsMarkingEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </StackPanel>
         </Button>
 

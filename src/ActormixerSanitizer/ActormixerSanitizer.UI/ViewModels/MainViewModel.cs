@@ -32,15 +32,15 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         public ICommand ConnectCommand { get; }
         public ICommand ScanCommand { get; }
-        public ICommand SelectAllCommand { get; }
-        public ICommand SelectNoneCommand { get; }
-        public ICommand ToggleSelectedCommand { get; }
+        public ICommand MarkAllCommand { get; }
+        public ICommand UnmarkAllCommand { get; }
+        public ICommand ToggleMarkedCommand { get; }
         public ICommand ConvertCommand { get; }
         public ICommand CopyNameCommand { get; }
         public ICommand CopyIdCommand { get; }
         public ICommand CopyPathCommand { get; }
         public ICommand SelectInWwiseCommand { get; }
-        public ICommand ShowSelectedListCommand { get; }
+        public ICommand ShowMarkedListCommand { get; }
         public ICommand ThemeChangeCommand { get; }
         public ICommand ToggleLogViewerCommand { get; }
 
@@ -79,9 +79,10 @@ namespace ActormixerSanitizer.UI.ViewModels
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsScanEnabled));
                 OnPropertyChanged(nameof(IsConvertEnabled));
-                OnPropertyChanged(nameof(IsShowSelectedListEnabled));
+                OnPropertyChanged(nameof(IsMarkingEnabled));
+                OnPropertyChanged(nameof(IsShowMarkedListEnabled));
                 OnPropertyChanged(nameof(ConnectIcon));
-                OnPropertyChanged(nameof(ShowSelectedListIcon));
+                OnPropertyChanged(nameof(ShowMarkedListIcon));
                 OnPropertyChanged(nameof(ConvertIcon));
                 OnPropertyChanged(nameof(IsConnectIconFilled));
                 OnPropertyChanged(nameof(IsSelectionEnabled));
@@ -177,15 +178,16 @@ namespace ActormixerSanitizer.UI.ViewModels
         public string ThemeIcon => _isDarkTheme ? "\uE706" : "\uEC46";
         public string ConnectIcon => IsNotConnected ? "\ueb55" : "\uec64";
         public bool IsConnectIconFilled => IsNotConnected;
-        public string ShowSelectedListIcon => IsShowSelectedListEnabled ? "\ue7ac" : "\ue7ba";
-        public string ConvertIcon => IsSelectionEnabled ? "\uf5b0" : "\ue7ba";
+        public string ShowMarkedListIcon => IsShowMarkedListEnabled ? "\ue7ac" : "\ue7ba";
+        public string ConvertIcon => IsMarkingEnabled ? "\uf5b0" : "\ue7ba";
 
         public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen;
-        public bool IsSelectionEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted;
+        public bool IsMarkingEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted && ActorMixers != null && ActorMixers.Any();
+        public bool IsSelectionEnabled => IsMarkingEnabled;
         public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen;
-        public bool IsShowSelectedListEnabled => !IsNotConnected && !IsDialogOpen;
+        public bool IsShowMarkedListEnabled => !IsNotConnected && !IsDialogOpen && ActorMixers != null && ActorMixers.Any();
 
-        private IEnumerable<ActorMixerInfo> SelectedActors => ActorMixers.Where(a => a.IsSelected);
+        private IEnumerable<ActorMixerInfo> MarkedActors => ActorMixers.Where(a => a.IsMarked);
 
         public MainViewModel(IActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger, IDialogService dialogService)
         {
@@ -204,9 +206,9 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             ConnectCommand = new AsyncRelayCommand(ConnectAsync);
             ScanCommand = new AsyncRelayCommand(ScanAsync);
-            SelectAllCommand = new RelayCommand(SelectAll);
-            SelectNoneCommand = new RelayCommand(SelectNone);
-            ToggleSelectedCommand = new RelayCommand<IList>(ToggleSelected);
+            MarkAllCommand = new RelayCommand(MarkAll);
+            UnmarkAllCommand = new RelayCommand(UnmarkAll);
+            ToggleMarkedCommand = new RelayCommand<IList>(ToggleMarked);
             ConvertCommand = new AsyncRelayCommand(ConvertAsync);
             CopyNameCommand = new RelayCommand<ActorMixerInfo>(actor =>
             {
@@ -216,7 +218,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             CopyIdCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Id));
             CopyPathCommand = new RelayCommand<ActorMixerInfo>(actor => CopyToClipboard(actor?.Path));
             SelectInWwiseCommand = new AsyncRelayCommand<ActorMixerInfo>(async actor => await SelectInWwise(actor?.Id));
-            ShowSelectedListCommand = new AsyncRelayCommand(ShowSelectedList);
+            ShowMarkedListCommand = new AsyncRelayCommand(ShowMarkedList);
             ThemeChangeCommand = new RelayCommand(ThemeChange);
             ToggleLogViewerCommand = new RelayCommand(ToggleLogViewer);
 
@@ -244,9 +246,9 @@ namespace ActormixerSanitizer.UI.ViewModels
                 {
                     _isDialogOpen = value;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(IsScanEnabled));
+                    OnPropertyChanged(nameof(IsMarkingEnabled));
                     OnPropertyChanged(nameof(IsConvertEnabled));
-                    OnPropertyChanged(nameof(IsShowSelectedListEnabled));
+                    OnPropertyChanged(nameof(IsShowMarkedListEnabled));
                     OnPropertyChanged(nameof(IsSelectionEnabled));
                 }
             }
@@ -324,7 +326,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             try
             {
-                var selectedIds = SelectedActors.Select(a => a.Id).ToHashSet();
+                var markedIds = MarkedActors.Select(a => a.Id).ToHashSet();
                 var actors = await _service.GetSanitizableMixersAsync();
 
                 ActorMixers.Clear();
@@ -333,9 +335,9 @@ namespace ActormixerSanitizer.UI.ViewModels
                 {
                     foreach (var actor in actors)
                     {
-                        if (selectedIds.Contains(actor.Id))
+                        if (markedIds.Contains(actor.Id))
                         {
-                            actor.IsSelected = true;
+                            actor.IsMarked = true;
                         }
                         ActorMixers.Add(actor);
                     }
@@ -346,6 +348,8 @@ namespace ActormixerSanitizer.UI.ViewModels
                     AddLog("Scan returned no mixers.");
                 }
                 IsScanned = true;
+                OnPropertyChanged(nameof(IsMarkingEnabled));
+                OnPropertyChanged(nameof(IsShowMarkedListEnabled));
             }
             catch (Exception ex)
             {
@@ -353,46 +357,46 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
-        private void SelectAll()
+        private void MarkAll()
         {
             if (ActorMixers.Any())
             {
                 foreach (var actor in ActorMixers)
                 {
-                    actor.IsSelected = true;
+                    actor.IsMarked = true;
                 }
             }
 
             else
-                AddLog("Nothing to select");
+                AddLog("Nothing to mark");
         }
 
-        private void SelectNone()
+        private void UnmarkAll()
         {
             if (ActorMixers.Any())
             {
                 foreach (var actor in ActorMixers)
                 {
-                    actor.IsSelected = false;
+                    actor.IsMarked = false;
                 }
             }
 
             else
-                AddLog("Nothing to deselect");
+                AddLog("Nothing to unmark");
         }
 
-        private void ToggleSelected(IList selectedItems)
+        private void ToggleMarked(IList selectedItems)
         {
             if (selectedItems != null && selectedItems.Count > 0)
             {
                 foreach (ActorMixerInfo actor in selectedItems.OfType<ActorMixerInfo>().ToList())
                 {
-                    actor.IsSelected = !actor.IsSelected;
+                    actor.IsMarked = !actor.IsMarked;
                 }
             }
 
             else
-                AddLog("Nothing to toggle");
+                AddLog("Nothing selected in the list to toggle");
         }
 
         private async Task ConvertAsync()
@@ -406,31 +410,33 @@ namespace ActormixerSanitizer.UI.ViewModels
             if (!await IsReadyForConvert())
                 return;
 
-            var selectedActors = SelectedActors.ToList();
+            var markedActors = MarkedActors.ToList();
 
-            if (selectedActors.Count == 0)
+            if (markedActors.Count == 0)
             {
-                AddLog("No actors selected");
+                AddLog("No actors marked");
                 return;
             }
 
             var confirmed = await _dialogService.ShowConfirmationDialog(
                 "Confirm Conversion",
-                $"Are you sure you want to convert {selectedActors.Count} actor-mixers?");
+                $"Are you sure you want to convert {markedActors.Count} actor-mixers?");
 
             if (!confirmed)
                 return;
 
             try
             {
-                await _service.ConvertToFoldersAsync(selectedActors);
+                await _service.ConvertToFoldersAsync(markedActors);
 
-                foreach (var actor in selectedActors)
+                foreach (var actor in markedActors)
                 {
                     ActorMixers.Remove(actor);
                 }
 
-                await _dialogService.ShowNotification("Notification", $"Successfully converted {selectedActors.Count} actor-mixers.");
+                await _dialogService.ShowNotification("Notification", $"Successfully converted {markedActors.Count} actor-mixers.");
+                OnPropertyChanged(nameof(IsMarkingEnabled));
+                OnPropertyChanged(nameof(IsShowMarkedListEnabled));
             }
             catch (Exception ex)
             {
@@ -479,19 +485,19 @@ namespace ActormixerSanitizer.UI.ViewModels
                 AddLog($"Select in Wwise failed: {ex.Message}");
             }
         }
-        private async Task ShowSelectedList()
+        private async Task ShowMarkedList()
         {
-            var selectedActors = SelectedActors.ToList();
+            var markedActors = MarkedActors.ToList();
 
-            if (!selectedActors.Any())
+            if (!markedActors.Any())
             {
-                AddLog("No selected actors to show");
+                AddLog("No marked actors to show");
                 return;
             }
 
             try
             {
-                await _service.ShowInListView(selectedActors);
+                await _service.ShowInListView(markedActors);
             }
             catch (Exception ex)
             {
