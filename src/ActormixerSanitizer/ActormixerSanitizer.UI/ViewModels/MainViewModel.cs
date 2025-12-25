@@ -69,6 +69,8 @@ namespace ActormixerSanitizer.UI.ViewModels
 
 
 
+        public bool IsRescanRequired => IsDirty || IsSaved || IsConverted || (!IsScanned && ActorMixers.Any());
+
         private bool _isNotConnected;
         public bool IsNotConnected
         {
@@ -77,19 +79,11 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isNotConnected = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(IsScanEnabled));
-                OnPropertyChanged(nameof(IsConvertEnabled));
-                OnPropertyChanged(nameof(IsMarkingEnabled));
-                OnPropertyChanged(nameof(IsShowMarkedListEnabled));
                 OnPropertyChanged(nameof(ConnectIcon));
-                OnPropertyChanged(nameof(ShowMarkedListIcon));
-                OnPropertyChanged(nameof(ConvertIcon));
                 OnPropertyChanged(nameof(IsConnectIconFilled));
-                OnPropertyChanged(nameof(IsSelectionEnabled));
+                NotifyStateChanged();
             }
         }
-
-        public bool IsRescanRequired => IsDirty || IsSaved || IsConverted;
 
         private bool _isDirty;
         public bool IsDirty
@@ -99,9 +93,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isDirty = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ConvertIcon));
-                OnPropertyChanged(nameof(IsSelectionEnabled));
-                OnPropertyChanged(nameof(IsRescanRequired));
+                NotifyStateChanged();
             }
         }
 
@@ -113,9 +105,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isSaved = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ConvertIcon));
-                OnPropertyChanged(nameof(IsSelectionEnabled));
-                OnPropertyChanged(nameof(IsRescanRequired));
+                NotifyStateChanged();
             }
         }
 
@@ -127,9 +117,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isConverted = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ConvertIcon));
-                OnPropertyChanged(nameof(IsSelectionEnabled));
-                OnPropertyChanged(nameof(IsRescanRequired));
+                NotifyStateChanged();
             }
         }
 
@@ -152,7 +140,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 _isScanned = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ConvertIcon));
+                NotifyStateChanged();
             }
         }
 
@@ -248,12 +236,21 @@ namespace ActormixerSanitizer.UI.ViewModels
                 {
                     _isDialogOpen = value;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(IsMarkingEnabled));
-                    OnPropertyChanged(nameof(IsConvertEnabled));
-                    OnPropertyChanged(nameof(IsShowMarkedListEnabled));
-                    OnPropertyChanged(nameof(IsSelectionEnabled));
+                    NotifyStateChanged();
                 }
             }
+        }
+
+        private void NotifyStateChanged()
+        {
+            OnPropertyChanged(nameof(IsScanEnabled));
+            OnPropertyChanged(nameof(IsMarkingEnabled));
+            OnPropertyChanged(nameof(IsConvertEnabled));
+            OnPropertyChanged(nameof(IsSelectionEnabled));
+            OnPropertyChanged(nameof(IsRescanRequired));
+            OnPropertyChanged(nameof(IsShowMarkedListEnabled));
+            OnPropertyChanged(nameof(ConvertIcon));
+            OnPropertyChanged(nameof(ShowMarkedListIcon));
         }
 
         private async void OnNotificationRequested(object sender, string message)
@@ -350,8 +347,6 @@ namespace ActormixerSanitizer.UI.ViewModels
                     AddLog("Scan returned no mixers.");
                 }
                 IsScanned = true;
-                OnPropertyChanged(nameof(IsMarkingEnabled));
-                OnPropertyChanged(nameof(IsShowMarkedListEnabled));
             }
             catch (Exception ex)
             {
@@ -436,7 +431,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                     ActorMixers.Remove(actor);
                 }
 
-                string message = $"Successfully converted {markedActors.Count} Actor-mixer{(markedActors.Count == 1 ? "" : "s")} to Virtual Folder{(markedActors.Count == 1 ? "" : "s")}.\n\n";
+                string message = $"Successfully converted {markedActors.Count} Actor-mixer{(markedActors.Count == 1 ? "" : "s")} to Virtual Folder{(markedActors.Count == 1 ? "" : "s")}.";
                 await _dialogService.ShowNotification("Conversion Successful", message);
                 OnPropertyChanged(nameof(IsMarkingEnabled));
                 OnPropertyChanged(nameof(IsShowMarkedListEnabled));
