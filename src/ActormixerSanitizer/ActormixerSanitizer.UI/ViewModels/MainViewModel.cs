@@ -224,6 +224,8 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             IsDarkTheme = App.IsDarkModeEnabled();
             App.SetTheme(IsDarkTheme);
+
+            _ = ConnectAsync();
         }
 
         private bool _isLogViewerVisible = false;
