@@ -436,13 +436,17 @@ namespace ActormixerSanitizer.UI.ViewModels
                     ActorMixers.Remove(actor);
                 }
 
-                await _dialogService.ShowNotification("Notification", $"Successfully converted {markedActors.Count} actor-mixer{(markedActors.Count == 1 ? "" : "s")}.");
+                string message = $"Successfully converted {markedActors.Count} Actor-mixer{(markedActors.Count == 1 ? "" : "s")} to Virtual Folder{(markedActors.Count == 1 ? "" : "s")}.\n\n";
+                await _dialogService.ShowNotification("Conversion Successful", message);
                 OnPropertyChanged(nameof(IsMarkingEnabled));
                 OnPropertyChanged(nameof(IsShowMarkedListEnabled));
             }
             catch (Exception ex)
             {
+                string errorMessage = $"An error occurred during conversion:\n\n{ex.Message}\n\n" +
+                                     "Some changes may have been partially applied. Please check the log for details.";
                 AddLog($"Conversion failed: {ex.Message}");
+                await _dialogService.ShowNotification("Conversion Failed", errorMessage);
             }
         }
 
