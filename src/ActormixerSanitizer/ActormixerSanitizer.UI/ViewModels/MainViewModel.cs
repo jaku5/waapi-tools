@@ -144,6 +144,16 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
+        public bool IsScanning
+        {
+            get => _service.IsScanning;
+            private set
+            {
+                OnPropertyChanged();
+                NotifyStateChanged();
+            }
+        }
+
         private bool _isDarkTheme;
         public bool IsDarkTheme
         {
@@ -169,11 +179,11 @@ namespace ActormixerSanitizer.UI.ViewModels
         public string ShowMarkedListIcon => IsShowMarkedListEnabled ? "\ue7ac" : "\ue7ba";
         public string ConvertIcon => IsMarkingEnabled ? "\uf5b0" : "\ue7ba";
 
-        public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen;
-        public bool IsMarkingEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted && ActorMixers != null && ActorMixers.Any();
+        public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen && !IsScanning;
+        public bool IsMarkingEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted && ActorMixers != null && ActorMixers.Any() && !IsScanning;
         public bool IsSelectionEnabled => IsMarkingEnabled;
-        public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen;
-        public bool IsShowMarkedListEnabled => !IsNotConnected && !IsDialogOpen && ActorMixers != null && ActorMixers.Any();
+        public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen && !IsScanning;
+        public bool IsShowMarkedListEnabled => !IsNotConnected && !IsDialogOpen && ActorMixers != null && ActorMixers.Any() && !IsScanning;
 
         private IEnumerable<ActorMixerInfo> MarkedActors => ActorMixers.Where(a => a.IsMarked);
 
@@ -251,6 +261,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             OnPropertyChanged(nameof(IsShowMarkedListEnabled));
             OnPropertyChanged(nameof(ConvertIcon));
             OnPropertyChanged(nameof(ShowMarkedListIcon));
+            OnPropertyChanged(nameof(IsScanning));
         }
 
         private async void OnNotificationRequested(object sender, string message)
@@ -351,6 +362,12 @@ namespace ActormixerSanitizer.UI.ViewModels
             catch (Exception ex)
             {
                 AddLog($"Scan failed: {ex.Message}");
+            }
+            finally
+            {
+                IsScanning = false;
+                OnPropertyChanged(nameof(IsScanning));
+                NotifyStateChanged();
             }
         }
 

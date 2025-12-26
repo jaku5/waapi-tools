@@ -1,6 +1,7 @@
 <Window x:Class="ActormixerSanitizer.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:ActormixerSanitizer.UI.Converters"
         Title="Actormixer Sanitizer" Height="450" Width="800"
         Closing="MainWindow_Closing">
     <Window.Resources>
@@ -54,6 +55,8 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <converters:FirstLineConverter x:Key="FirstLineConverter" />
     </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -233,6 +236,24 @@
                 </ListBox.ItemTemplate>
 
             </ListBox>
+
+            <!-- Scanning Overlay -->
+            <Grid Grid.Row="0" Grid.RowSpan="2" Background="#80000000" 
+                  Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,10"/>
+                    <TextBlock Text="Scanning Wwise Project..." 
+                               Foreground="White" 
+                               FontSize="16" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding LogText, Converter={StaticResource FirstLineConverter}}" 
+                               Foreground="White" 
+                               FontSize="12" 
+                               HorizontalAlignment="Center"
+                               Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <GridSplitter Grid.Row="3" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>

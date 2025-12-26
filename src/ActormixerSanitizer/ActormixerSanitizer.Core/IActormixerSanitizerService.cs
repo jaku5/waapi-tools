@@ -18,6 +18,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         bool IsConnectionLost { get; }
         bool IsScanned { get; }
         bool IsConverting { get; }
+        bool IsScanning { get; }
 
         Task SubscribeToChangesAsync();
         Task UnsubscribeFromChangesAsync();

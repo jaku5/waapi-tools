@@ -57,6 +57,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         }
 
         public bool IsConverting { get; private set; }
+        public bool IsScanning { get; private set; }
 
         private List<int> _subscriptionIds = new List<int>();
 
@@ -166,8 +167,14 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             if (actors == null || !actors.Any())
                 return new List<ActorMixerInfo>();
 
-            var processedActors = await ProcessActorsAsync(_client, actors);
+            IsScanning = true;
+            var processedActors = await ProcessActorsAsync(_client, actors, (current, total) =>
+            {
+                StatusUpdated?.Invoke(this, $"Processing: {current} of {total}");
+                _logger.LogInformation($"Processing: {current} of {total}");
+            });
             await RemoveActorsWithActiveStates(_client, processedActors);
+            IsScanning = false;
 
             await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
                 new JProperty("displayName", "Create and remove temp query")));
@@ -288,12 +295,16 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return result[ReturnKey] as JArray;
         }
 
-        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors)
+        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors, Action<int, int> progressCallback = null)
         {
             var actorsToConvert = new JArray();
+            int total = actors.Count;
+            int current = 0;
 
             foreach (var actor in actors)
             {
+                current++;
+                progressCallback?.Invoke(current, total);
                 var propertiesToCheck = new List<string>();
 
                 bool hasDiffProperties = true;
