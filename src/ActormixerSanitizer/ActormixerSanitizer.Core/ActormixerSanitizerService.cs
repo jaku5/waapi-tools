@@ -58,6 +58,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public bool IsConverting { get; private set; }
         public bool IsScanning { get; private set; }
+        public string ProjectName { get; private set; }
+        public string WwiseVersion { get; private set; }
 
         private List<int> _subscriptionIds = new List<int>();
 
@@ -146,6 +148,21 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             await _client.Connect();
 
             _isScanned = false;
+            _isConnectionLost = false;
+
+            try
+            {
+                var projectInfo = await _client.Call(ak.wwise.core.getProjectInfo);
+                ProjectName = projectInfo?["name"]?.ToString();
+
+                var info = await _client.Call(ak.wwise.core.getInfo);
+                WwiseVersion = info?["version"]?["displayName"]?.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Failed to fetch project info: {ex.Message}");
+            }
+
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
         }
 

@@ -155,6 +155,41 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
+        private bool _isConnecting;
+        public bool IsConnecting
+        {
+            get => _isConnecting;
+            set
+            {
+                _isConnecting = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(WindowTitle));
+                NotifyStateChanged();
+            }
+        }
+
+        public string ProjectName => _service.ProjectName;
+        public string WwiseVersion => _service.WwiseVersion;
+
+        public bool CanConnect => IsNotConnected && !IsConnecting;
+        public bool ShowConnectingProgress => IsConnecting;
+        public bool ShowConnectionIcon => !IsConnecting;
+
+        public string WindowTitle
+        {
+            get
+            {
+                string baseTitle = "Actormixer Sanitizer";
+                if (IsConnecting) return $"{baseTitle} - [Connecting...]";
+                if (IsNotConnected) return $"{baseTitle} - [Disconnected]";
+                
+                string projectPart = !string.IsNullOrEmpty(ProjectName) ? $" - {ProjectName}" : "";
+                string versionPart = !string.IsNullOrEmpty(WwiseVersion) ? $" (Wwise {WwiseVersion})" : "";
+                
+                return $"{baseTitle}{projectPart}{versionPart}";
+            }
+        }
+
         public bool IsScanning
         {
             get => _service.IsScanning;
@@ -235,6 +270,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             App.SetTheme(IsDarkTheme);
 
             _ = ConnectAsync();
+            _ = StartAutoConnectLoop();
         }
 
         private bool _isLogViewerVisible = false;
@@ -273,6 +309,10 @@ namespace ActormixerSanitizer.UI.ViewModels
             OnPropertyChanged(nameof(ConvertIcon));
             OnPropertyChanged(nameof(ShowMarkedListIcon));
             OnPropertyChanged(nameof(IsScanning));
+            OnPropertyChanged(nameof(WindowTitle));
+            OnPropertyChanged(nameof(CanConnect));
+            OnPropertyChanged(nameof(ShowConnectingProgress));
+            OnPropertyChanged(nameof(ShowConnectionIcon));
         }
 
         private async void OnNotificationRequested(object sender, string message)
@@ -324,9 +364,12 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async Task ConnectAsync()
         {
-            _service.Disconnect();
+            if (IsConnecting) return;
+            
             try
             {
+                IsConnecting = true;
+                _service.Disconnect();
                 await _service.ConnectAsync();
                 AddLog("Connected to Wwise");
                 IsNotConnected = false;
@@ -335,6 +378,29 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 AddLog($"Connection failed: {ex.Message}");
                 IsNotConnected = true;
+            }
+            finally
+            {
+                IsConnecting = false;
+            }
+        }
+
+        private async Task StartAutoConnectLoop()
+        {
+            while (true)
+            {
+                if (IsNotConnected && !IsConnecting)
+                {
+                    try
+                    {
+                        await ConnectAsync();
+                    }
+                    catch
+                    {
+                        // Ignore connection attempts in loop
+                    }
+                }
+                await Task.Delay(5000); // Check every 5 seconds
             }
         }
 

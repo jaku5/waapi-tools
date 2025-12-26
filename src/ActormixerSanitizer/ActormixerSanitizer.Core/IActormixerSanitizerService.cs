@@ -19,6 +19,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         bool IsScanned { get; }
         bool IsConverting { get; }
         bool IsScanning { get; }
+        string ProjectName { get; }
+        string WwiseVersion { get; }
 
         Task SubscribeToChangesAsync();
         Task UnsubscribeFromChangesAsync();

@@ -1,7 +1,7 @@
 <Window x:Class="ActormixerSanitizer.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Actormixer Sanitizer" Height="450" Width="800"
+        Title="{Binding WindowTitle}" Height="450" Width="800"
         Closing="MainWindow_Closing">
     <Window.Resources>
         <Style x:Key="GraphicToCheckboxStyle" TargetType="{x:Type ToggleButton}">
@@ -77,9 +77,15 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Command="{Binding ConnectCommand}"
-					Width="60"  Height="45" Margin="0,0,0,0" IsEnabled="{Binding IsNotConnected}"
-					ToolTip="Connect">
-                <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConnectIcon}"/>
+					Width="60"  Height="45" Margin="0,0,0,0"
+					ToolTip="Connect"
+                    IsEnabled="{Binding CanConnect}">
+                <Grid>
+                    <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConnectIcon}" 
+                               Visibility="{Binding ShowConnectionIcon, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <ProgressBar IsIndeterminate="True" Width="20" Height="20" 
+                                 Visibility="{Binding ShowConnectingProgress, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </Grid>
             </Button>
 
             <Grid Grid.Column="1">
