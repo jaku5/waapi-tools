@@ -29,6 +29,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         private ObservableCollection<ActorMixerInfo> _actorMixers;
 
         private string _logText = "";
+        private string _currentStatus = "";
 
         public ICommand ConnectCommand { get; }
         public ICommand ScanCommand { get; }
@@ -62,6 +63,16 @@ namespace ActormixerSanitizer.UI.ViewModels
             private set
             {
                 _logText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string CurrentStatus
+        {
+            get => _currentStatus;
+            private set
+            {
+                _currentStatus = value;
                 OnPropertyChanged();
             }
         }
@@ -278,6 +289,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private void AddLog(string message)
         {
+            CurrentStatus = message;
             LogText = $"{DateTime.Now:HH:mm:ss}: {message}\n{LogText}";
             _logger.LogInformation(message);
         }
@@ -489,6 +501,8 @@ namespace ActormixerSanitizer.UI.ViewModels
                 IsConverted = _service.IsConverted;
                 IsConnectionLost = _service.IsConnectionLost;
                 IsScanned = _service.IsScanned;
+                OnPropertyChanged(nameof(IsScanning));
+                NotifyStateChanged();
             });
         }
 

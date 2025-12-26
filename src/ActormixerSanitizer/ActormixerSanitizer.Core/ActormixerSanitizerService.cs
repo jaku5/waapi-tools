@@ -168,6 +168,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 return new List<ActorMixerInfo>();
 
             IsScanning = true;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             var processedActors = await ProcessActorsAsync(_client, actors, (current, total) =>
             {
                 StatusUpdated?.Invoke(this, $"Processing: {current} of {total}");
@@ -175,6 +176,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             });
             await RemoveActorsWithActiveStates(_client, processedActors);
             IsScanning = false;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
 
             await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
                 new JProperty("displayName", "Create and remove temp query")));
@@ -223,6 +225,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors)
         {
             IsConverting = true;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
             var sortedActors = actors.OrderBy(a => a.Path.Count(c => c == '\\')).ToList();
@@ -270,8 +273,8 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 new JProperty("displayName", "Sanitize Actor-Mixers")));
 
             _isConverted = true;
-            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             IsConverting = false;
+            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)
