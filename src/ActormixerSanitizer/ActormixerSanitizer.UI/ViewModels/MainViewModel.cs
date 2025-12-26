@@ -228,7 +228,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         public bool IsScanEnabled => !IsNotConnected && !IsDialogOpen && !IsScanning;
         public bool IsMarkingEnabled => IsScanEnabled && !IsDirty && !IsSaved && !IsConverted && ActorMixers != null && ActorMixers.Any() && !IsScanning;
         public bool IsSelectionEnabled => IsMarkingEnabled;
-        public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen && !IsScanning;
+        public bool IsConvertEnabled => !IsNotConnected && !IsDialogOpen && !IsScanning && MarkedActors.Any();
         public bool IsShowMarkedListEnabled => !IsNotConnected && !IsDialogOpen && ActorMixers != null && ActorMixers.Any() && !IsScanning;
 
         private IEnumerable<ActorMixerInfo> MarkedActors => ActorMixers.Where(a => a.IsMarked);
@@ -270,7 +270,6 @@ namespace ActormixerSanitizer.UI.ViewModels
             App.SetTheme(IsDarkTheme);
 
             _ = ConnectAsync();
-            _ = StartAutoConnectLoop();
         }
 
         private bool _isLogViewerVisible = false;
@@ -382,25 +381,6 @@ namespace ActormixerSanitizer.UI.ViewModels
             finally
             {
                 IsConnecting = false;
-            }
-        }
-
-        private async Task StartAutoConnectLoop()
-        {
-            while (true)
-            {
-                if (IsNotConnected && !IsConnecting)
-                {
-                    try
-                    {
-                        await ConnectAsync();
-                    }
-                    catch
-                    {
-                        // Ignore connection attempts in loop
-                    }
-                }
-                await Task.Delay(5000); // Check every 5 seconds
             }
         }
 
