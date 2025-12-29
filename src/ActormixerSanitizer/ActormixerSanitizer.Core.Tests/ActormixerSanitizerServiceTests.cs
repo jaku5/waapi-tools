@@ -280,7 +280,7 @@ new JProperty("id", ancestorId),
       var emptyAncestorResult = new JObject(new JProperty("return", new JArray()));
       var stateGroupResult = new JObject(new JProperty("return", new JArray()));
 
-      SetupWaapiCallsForTest(actorMixersResult, emptyAncestorResult, 
+      SetupWaapiCallsForTest(actorMixersResult, emptyAncestorResult,
       new JObject(new JProperty("properties", new JArray())),
       new JObject(new JProperty("return", new JArray())),
       new JObject(new JProperty("return", new JArray())),

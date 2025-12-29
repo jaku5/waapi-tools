@@ -26,9 +26,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         Task UnsubscribeFromChangesAsync();
         void Disconnect();
         Task ConnectAsync();
-        Task<List<ActorMixerInfo>> GetSanitizableMixersAsync();
+        Task<List<ActorMixerInfo>> GetSanitizableMixersAsync(Action<int, int>? progressCallback = null);
         Task<bool> CheckProjectStateAsync();
-        Task ConvertToFoldersAsync(List<ActorMixerInfo> actors);
+        Task ConvertToFoldersAsync(List<ActorMixerInfo> actors, Action<int, int>? progressCallback = null);
         Task SelectInProjectExplorer(string actorId);
         Task ShowInListView(List<ActorMixerInfo> actors);
     }

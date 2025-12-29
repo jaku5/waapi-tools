@@ -200,6 +200,40 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
+        public bool IsConverting
+        {
+            get => _service.IsConverting;
+            private set
+            {
+                OnPropertyChanged();
+                NotifyStateChanged();
+            }
+        }
+
+        public bool IsBusy => IsScanning || IsConverting;
+
+        private double _progressValue;
+        public double ProgressValue
+        {
+            get => _progressValue;
+            set
+            {
+                _progressValue = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _progressText = "";
+        public string ProgressText
+        {
+            get => _progressText;
+            set
+            {
+                _progressText = value;
+                OnPropertyChanged();
+            }
+        }
+
         private bool _isDarkTheme;
         public bool IsDarkTheme
         {
@@ -312,6 +346,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             OnPropertyChanged(nameof(CanConnect));
             OnPropertyChanged(nameof(ShowConnectingProgress));
             OnPropertyChanged(nameof(ShowConnectionIcon));
+            OnPropertyChanged(nameof(IsBusy));
+            OnPropertyChanged(nameof(IsConverting));
         }
 
         private async void OnNotificationRequested(object sender, string message)
@@ -394,8 +430,14 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             try
             {
+                ProgressValue = 0;
+                ProgressText = "Scanning...";
                 var markedIds = MarkedActors.Select(a => a.Id).ToHashSet();
-                var actors = await _service.GetSanitizableMixersAsync();
+                var actors = await _service.GetSanitizableMixersAsync((current, total) =>
+                {
+                    ProgressValue = (double)current / total * 100;
+                    ProgressText = $"Scanning: {current} of {total}";
+                });
 
                 ActorMixers.Clear();
 
@@ -499,7 +541,13 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             try
             {
-                await _service.ConvertToFoldersAsync(markedActors);
+                ProgressValue = 0;
+                ProgressText = "Converting...";
+                await _service.ConvertToFoldersAsync(markedActors, (current, total) =>
+                {
+                    ProgressValue = (double)current / total * 100;
+                    ProgressText = $"Converting: {current} of {total}";
+                });
 
                 foreach (var actor in markedActors)
                 {

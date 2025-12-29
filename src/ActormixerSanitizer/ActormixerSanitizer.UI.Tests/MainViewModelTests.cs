@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.Windows;
 using System.Windows.Input;
 using ActormixerSanitizer.UI.Services;
+using System;
 
 namespace ActormixerSanitizer.UI.Tests
 {
@@ -39,7 +40,7 @@ namespace ActormixerSanitizer.UI.Tests
             _dialogServiceMock = new Mock<IDialogService>();
 
             // Setup default behaviors
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(new List<ActorMixerInfo>());
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(new List<ActorMixerInfo>());
         }
 
         private void CreateViewModel()
@@ -58,7 +59,7 @@ namespace ActormixerSanitizer.UI.Tests
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
 
             // Assert
-            _sanitizerServiceMock.Verify(s => s.GetSanitizableMixersAsync(), Times.Once);
+            _sanitizerServiceMock.Verify(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>()), Times.Once);
         }
 
         [Fact]
@@ -72,7 +73,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "2", Name = "Mixer2" }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
 
             // Act
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
@@ -89,7 +90,7 @@ namespace ActormixerSanitizer.UI.Tests
             // Arrange
             CreateViewModel();
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(new List<ActorMixerInfo>());
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(new List<ActorMixerInfo>());
 
             // Add some initial data
             _viewModel.ActorMixers.Add(new ActorMixerInfo { Id = "old", Name = "OldMixer" });
@@ -125,7 +126,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
             _dialogServiceMock.Setup(d => d.ShowConfirmationDialog(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
 
@@ -136,7 +137,7 @@ namespace ActormixerSanitizer.UI.Tests
             await ((IAsyncRelayCommand)_viewModel.ConvertCommand).ExecuteAsync(null);
 
             // Assert - ConvertToFoldersAsync should not be called
-            _sanitizerServiceMock.Verify(s => s.ConvertToFoldersAsync(It.IsAny<List<ActorMixerInfo>>()), Times.Never);
+            _sanitizerServiceMock.Verify(s => s.ConvertToFoldersAsync(It.IsAny<List<ActorMixerInfo>>(), It.IsAny<Action<int, int>>()), Times.Never);
         }
 
         [Fact]
@@ -150,8 +151,8 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
-            _sanitizerServiceMock.Setup(s => s.ConvertToFoldersAsync(It.IsAny<List<ActorMixerInfo>>()))
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.ConvertToFoldersAsync(It.IsAny<List<ActorMixerInfo>>(), It.IsAny<Action<int, int>>()))
                 .Returns(Task.CompletedTask);
             _dialogServiceMock.Setup(d => d.ShowConfirmationDialog(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
@@ -165,7 +166,7 @@ namespace ActormixerSanitizer.UI.Tests
             // Assert
             _sanitizerServiceMock.Verify(
                 s => s.ConvertToFoldersAsync(It.Is<List<ActorMixerInfo>>(
-                    list => list.Count == 1 && list[0].Id == "1")), Times.Once);
+                    list => list.Count == 1 && list[0].Id == "1"), It.IsAny<Action<int, int>>()), Times.Once);
         }
 
         [Fact]
@@ -180,7 +181,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "3", Name = "Mixer3", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
 
             // Populate the collection
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
@@ -203,7 +204,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = true }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
 
             // Populate the collection
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
@@ -225,7 +226,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "mixer-id-123", Name = "Mixer1" }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
             _sanitizerServiceMock.Setup(s => s.SelectInProjectExplorer("mixer-id-123"))
                 .Returns(Task.CompletedTask);
 
@@ -252,7 +253,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "2", Name = "Mixer2", IsMarked = true }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
             _sanitizerServiceMock.Setup(s => s.ShowInListView(It.IsAny<List<ActorMixerInfo>>()))
                 .Returns(Task.CompletedTask);
 
@@ -276,7 +277,7 @@ namespace ActormixerSanitizer.UI.Tests
             // Arrange
             CreateViewModel();
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync((List<ActorMixerInfo>)null!);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync((List<ActorMixerInfo>)null!);
 
             // Act
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
@@ -333,7 +334,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = false }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
 
             // Populate
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
@@ -353,7 +354,7 @@ namespace ActormixerSanitizer.UI.Tests
                 new ActorMixerInfo { Id = "1", Name = "Mixer1", IsMarked = true }
             };
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
-            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync()).ReturnsAsync(mixers);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(mixers);
 
             // Populate and select
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
@@ -371,7 +372,7 @@ namespace ActormixerSanitizer.UI.Tests
             // Arrange
             // We need to ensure the constructor hasn't flipped it yet, or use a mock that doesn't immediately succeed.
             _sanitizerServiceMock.Setup(s => s.ConnectAsync()).Returns(new TaskCompletionSource().Task); // Never completes
-            
+
             // Act
             CreateViewModel();
 

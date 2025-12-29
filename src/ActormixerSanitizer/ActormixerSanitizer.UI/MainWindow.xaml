@@ -241,12 +241,12 @@
 
             </ListBox>
 
-            <!-- Scanning Overlay -->
+            <!-- Busy Overlay (Scanning/Converting) -->
             <Grid Grid.Row="0" Grid.RowSpan="2" Background="#80000000" 
-                  Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                  Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,10"/>
-                    <TextBlock Text="Scanning Wwise Project..." 
+                    <ProgressBar Value="{Binding ProgressValue}" Width="200" Height="20" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding ProgressText}" 
                                Foreground="White" 
                                FontSize="16" 
                                FontWeight="Bold" 

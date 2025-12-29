@@ -166,7 +166,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync()
+        public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync(Action<int, int>? progressCallback = null)
         {
             _isSaved = false;
             _isConverted = false;
@@ -188,6 +188,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             var processedActors = await ProcessActorsAsync(_client, actors, (current, total) =>
             {
+                progressCallback?.Invoke(current, total);
                 StatusUpdated?.Invoke(this, $"Processing: {current} of {total}");
                 _logger.LogInformation($"Processing: {current} of {total}");
             });
@@ -239,16 +240,20 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
         }
 
-        public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors)
+        public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors, Action<int, int>? progressCallback = null)
         {
             IsConverting = true;
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
             var sortedActors = actors.OrderBy(a => a.Path.Count(c => c == '\\')).ToList();
+            int total = sortedActors.Count;
+            int current = 0;
 
             foreach (var actor in sortedActors)
             {
+                current++;
+                progressCallback?.Invoke(current, total);
                 _logger.LogInformation($"Converting: {actor.Name}");
                 StatusUpdated?.Invoke(this, $"Converting: {actor.Name}");
                 var tempName = $"{actor.Name}Temp";
