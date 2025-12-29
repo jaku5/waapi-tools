@@ -238,8 +238,26 @@
                         </Border>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
+
             </ListBox>
 
+            <!-- Busy Overlay (Scanning/Converting) -->
+            <Grid Grid.Row="0" Grid.RowSpan="2" Background="#80000000" 
+                  Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ProgressBar Value="{Binding ProgressValue}" Width="200" Height="20" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding ProgressText}" 
+                               Foreground="White" 
+                               FontSize="16" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding CurrentStatus}" 
+                               Foreground="White" 
+                               FontSize="12" 
+                               HorizontalAlignment="Center"
+                               Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <GridSplitter Grid.Row="3" Background="Transparent" HorizontalAlignment="Stretch" ShowsPreview="True"/>

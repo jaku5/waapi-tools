@@ -42,42 +42,5 @@ namespace ActormixerSanitizer.UI.Services
                 Application.Current.MainWindow.Activate();
             });
         }
-
-        private Dialogs.ProgressDialog _progressDialog;
-
-        public void ShowProgress(string title)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                if (_progressDialog != null) return;
-
-                _progressDialog = new Dialogs.ProgressDialog(title, Application.Current.MainWindow);
-                // Simulate blocking by disabling main window
-                Application.Current.MainWindow.IsEnabled = false;
-                _progressDialog.Show();
-            });
-        }
-
-        public void UpdateProgress(double value, string message, string status = "")
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                _progressDialog?.UpdateProgress(value, message, status);
-            });
-        }
-
-        public void HideProgress()
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                if (_progressDialog != null)
-                {
-                    _progressDialog.Close();
-                    _progressDialog = null;
-                    Application.Current.MainWindow.IsEnabled = true;
-                    Application.Current.MainWindow.Activate();
-                }
-            });
-        }
     }
 }
