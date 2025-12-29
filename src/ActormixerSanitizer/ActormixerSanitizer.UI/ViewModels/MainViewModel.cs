@@ -432,11 +432,13 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 ProgressValue = 0;
                 ProgressText = "Scanning...";
+                _dialogService.ShowProgress("Scanning Project");
                 var markedIds = MarkedActors.Select(a => a.Id).ToHashSet();
                 var actors = await _service.GetSanitizableMixersAsync((current, total) =>
                 {
                     ProgressValue = (double)current / total * 100;
                     ProgressText = $"Scanning: {current} of {total}";
+                    _dialogService.UpdateProgress(ProgressValue, ProgressText, CurrentStatus);
                 });
 
                 ActorMixers.Clear();
@@ -466,6 +468,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             finally
             {
                 IsScanning = false;
+                _dialogService.HideProgress();
                 OnPropertyChanged(nameof(IsScanning));
                 NotifyStateChanged();
             }
@@ -543,10 +546,12 @@ namespace ActormixerSanitizer.UI.ViewModels
             {
                 ProgressValue = 0;
                 ProgressText = "Converting...";
+                _dialogService.ShowProgress("Converting Actor-mixers");
                 await _service.ConvertToFoldersAsync(markedActors, (current, total) =>
                 {
                     ProgressValue = (double)current / total * 100;
                     ProgressText = $"Converting: {current} of {total}";
+                    _dialogService.UpdateProgress(ProgressValue, ProgressText);
                 });
 
                 foreach (var actor in markedActors)
@@ -565,6 +570,10 @@ namespace ActormixerSanitizer.UI.ViewModels
                                      "Some changes may have been partially applied. Please check the log for details.";
                 AddLog($"Conversion failed: {ex.Message}");
                 await _dialogService.ShowNotification("Conversion Failed", errorMessage);
+            }
+            finally
+            {
+                _dialogService.HideProgress();
             }
         }
 
