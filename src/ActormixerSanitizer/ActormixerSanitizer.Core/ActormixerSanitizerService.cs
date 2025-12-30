@@ -197,9 +197,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                     _logger.LogInformation($"Processing: {current} of {total}");
                 }, cancellationToken);
                 await RemoveActorsWithActiveStates(_client, processedActors, cancellationToken);
-                IsScanning = false;
-                ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-
+                
                 return processedActors.Select(a => new ActorMixerInfo
                 {
                     Id = a["id"]?.ToString(),
@@ -213,15 +211,13 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
             finally
             {
+                IsScanning = false;
                 if (!_isConnectionLost)
                 {
-                    await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                        new JProperty("displayName", "Create and remove temp query")));
-
-                    await _client.Call(ak.wwise.core.undo.undoLast);
-
+                    await _client.Call(ak.wwise.core.undo.cancelGroup);
                     await SubscribeToChangesAsync();
                 }
+                ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

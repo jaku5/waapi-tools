@@ -19,10 +19,17 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Window.Resources>
     
-    <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}" CornerRadius="5">
-        <Grid Margin="25,22,25,24">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        
+        <Border Grid.Row="0" Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}" />
+        <Border Grid.Row="1" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
+
+        <Grid Grid.Row="0" Margin="25,22,25,24">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -35,9 +42,11 @@
 
             <ProgressBar Grid.Row="2" Value="{Binding ProgressValue}" Maximum="100" Height="8" Margin="0,0,0,10" />
 
-            <TextBlock Grid.Row="3" Text="{Binding CurrentStatus}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" HorizontalAlignment="Left" Margin="0,0,0,16"/>
-
-            <Button Grid.Row="4" Content="Cancel" Command="{Binding CancelCommand}" HorizontalAlignment="Right" Width="80" Padding="10,5" />
+            <TextBlock Grid.Row="3" Text="{Binding CurrentStatus}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" HorizontalAlignment="Left"/>
         </Grid>
-    </Border>
+
+        <Grid Grid.Row="1" Margin="20,24,20,24">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="4,0,4,1" Padding="10,5" Height="32" HorizontalAlignment="Right" Width="80" />
+        </Grid>
+    </Grid>
 </Window>
