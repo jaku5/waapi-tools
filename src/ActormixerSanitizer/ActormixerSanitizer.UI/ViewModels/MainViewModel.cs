@@ -391,14 +391,14 @@ namespace ActormixerSanitizer.UI.ViewModels
             IsDialogOpen = true;
             try
             {
-                await _dialogService.RunTaskWithProgress("Scanning Project", async progress =>
+                await _dialogService.RunTaskWithProgress("Scanning Project", async (progress, ct) =>
                 {
                     progress.Update(0, "Scanning...", "");
                     var markedIds = MarkedActors.Select(a => a.Id).ToHashSet();
                     var actors = await _service.GetSanitizableMixersAsync((current, total) =>
                     {
                         progress.Update((double)current / total * 100, $"Scanning: {current} of {total}", "");
-                    });
+                    }, ct);
 
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
@@ -423,6 +423,10 @@ namespace ActormixerSanitizer.UI.ViewModels
                         IsScanned = true;
                     });
                 });
+            }
+            catch (OperationCanceledException)
+            {
+                AddLog("Scan operation cancelled");
             }
             catch (Exception ex)
             {
@@ -507,13 +511,13 @@ namespace ActormixerSanitizer.UI.ViewModels
             IsDialogOpen = true;
             try
             {
-                await _dialogService.RunTaskWithProgress("Converting to Folders", async progress =>
+                await _dialogService.RunTaskWithProgress("Converting to Folders", async (progress, ct) =>
                 {
                     progress.Update(0, "Converting...", "");
                     await _service.ConvertToFoldersAsync(markedActors, (current, total) =>
                     {
                         progress.Update((double)current / total * 100, $"Converting: {current} of {total}", "");
-                    });
+                    }, ct);
 
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
@@ -528,6 +532,11 @@ namespace ActormixerSanitizer.UI.ViewModels
                 await _dialogService.ShowNotification("Conversion Successful", message);
                 OnPropertyChanged(nameof(IsMarkingEnabled));
                 OnPropertyChanged(nameof(IsShowMarkedListEnabled));
+            }
+            catch (OperationCanceledException)
+            {
+                AddLog("Conversion operation cancelled");
+                await _dialogService.ShowNotification("Cancelled", "Conversion operation was cancelled. Any partial changes have been undone.");
             }
             catch (Exception ex)
             {

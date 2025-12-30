@@ -166,7 +166,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync(Action<int, int>? progressCallback = null)
+        public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync(Action<int, int>? progressCallback = null, System.Threading.CancellationToken cancellationToken = default)
         {
             _isSaved = false;
             _isConverted = false;
@@ -178,41 +178,51 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
-            var actorQuery = BuildQueryStrings(ActorCandidatesQuery, _unityProperties);
-            var actors = await GetActorMixersAsync(_client, actorQuery.Item1, actorQuery.Item2);
-
-            if (actors == null || !actors.Any())
-                return new List<ActorMixerInfo>();
-
-            IsScanning = true;
-            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
-            var processedActors = await ProcessActorsAsync(_client, actors, (current, total) =>
+            try
             {
-                progressCallback?.Invoke(current, total);
-                StatusUpdated?.Invoke(this, $"Processing: {current} of {total}");
-                _logger.LogInformation($"Processing: {current} of {total}");
-            });
-            await RemoveActorsWithActiveStates(_client, processedActors);
-            IsScanning = false;
-            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+                var actorQuery = BuildQueryStrings(ActorCandidatesQuery, _unityProperties);
+                var actors = await GetActorMixersAsync(_client, actorQuery.Item1, actorQuery.Item2);
 
-            await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                new JProperty("displayName", "Create and remove temp query")));
+                if (actors == null || !actors.Any())
+                    return new List<ActorMixerInfo>();
 
-            await _client.Call(ak.wwise.core.undo.undoLast);
+                cancellationToken.ThrowIfCancellationRequested();
 
-            await SubscribeToChangesAsync();
+                IsScanning = true;
+                ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+                var processedActors = await ProcessActorsAsync(_client, actors, (current, total) =>
+                {
+                    progressCallback?.Invoke(current, total);
+                    StatusUpdated?.Invoke(this, $"Processing: {current} of {total}");
+                    _logger.LogInformation($"Processing: {current} of {total}");
+                }, cancellationToken);
+                await RemoveActorsWithActiveStates(_client, processedActors, cancellationToken);
+                IsScanning = false;
+                ProjectStateChanged?.Invoke(this, EventArgs.Empty);
 
-            return processedActors.Select(a => new ActorMixerInfo
+                return processedActors.Select(a => new ActorMixerInfo
+                {
+                    Id = a["id"]?.ToString(),
+                    Name = a["name"]?.ToString(),
+                    Path = a["path"]?.ToString(),
+                    ParentId = a["parent.id"]?.ToString(),
+                    Notes = a["notes"]?.ToString(),
+                    AncestorId = a["ancestor.id"]?.ToString(),
+                    AncestorName = a["ancestor.name"]?.ToString()
+                }).ToList();
+            }
+            finally
             {
-                Id = a["id"]?.ToString(),
-                Name = a["name"]?.ToString(),
-                Path = a["path"]?.ToString(),
-                ParentId = a["parent.id"]?.ToString(),
-                Notes = a["notes"]?.ToString(),
-                AncestorId = a["ancestor.id"]?.ToString(),
-                AncestorName = a["ancestor.name"]?.ToString()
-            }).ToList();
+                if (!_isConnectionLost)
+                {
+                    await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                        new JProperty("displayName", "Create and remove temp query")));
+
+                    await _client.Call(ak.wwise.core.undo.undoLast);
+
+                    await SubscribeToChangesAsync();
+                }
+            }
         }
 
         public async Task<bool> CheckProjectStateAsync()
@@ -240,63 +250,88 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             }
         }
 
-        public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors, Action<int, int>? progressCallback = null)
+        public async Task ConvertToFoldersAsync(List<ActorMixerInfo> actors, Action<int, int>? progressCallback = null, System.Threading.CancellationToken cancellationToken = default)
         {
             IsConverting = true;
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
-            var sortedActors = actors.OrderBy(a => a.Path.Count(c => c == '\\')).ToList();
-            int total = sortedActors.Count;
-            int current = 0;
-
-            foreach (var actor in sortedActors)
+            try
             {
-                current++;
-                progressCallback?.Invoke(current, total);
-                _logger.LogInformation($"Converting: {actor.Name}");
-                StatusUpdated?.Invoke(this, $"Converting: {actor.Name}");
-                var tempName = $"{actor.Name}Temp";
+                var sortedActors = actors.OrderBy(a => a.Path.Count(c => c == '\\')).ToList();
+                int total = sortedActors.Count;
+                int current = 0;
 
-                var lastBackslash = actor.Path.LastIndexOf('\\');
-                var parentPath = actor.Path.Substring(0, lastBackslash);
-
-                await _client.Call(ak.wwise.core.@object.create, new JObject(
-                    new JProperty("parent", parentPath),
-                    new JProperty("type", "Folder"),
-                    new JProperty("name", tempName),
-                    new JProperty("notes", actor.Notes)));
-
-                var actorPath = $"\"{actor.Path.Replace("\\\\", "\\")}\"";
-                var folderPath = $"{actor.Path.Replace("\\\\", "\\")}Temp";
-
-                // Move children
-                var childrenResult = await QueryWaapiAsync(_client, $"$ {actorPath} select children", new[] { "name", "id" });
-                if (childrenResult[ReturnKey] is JArray children && children.Any())
+                foreach (var actor in sortedActors)
                 {
-                    foreach (var child in children)
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    current++;
+                    progressCallback?.Invoke(current, total);
+                    _logger.LogInformation($"Converting: {actor.Name}");
+                    StatusUpdated?.Invoke(this, $"Converting: {actor.Name}");
+                    var tempName = $"{actor.Name}Temp";
+
+                    var lastBackslash = actor.Path.LastIndexOf('\\');
+                    var parentPath = actor.Path.Substring(0, lastBackslash);
+
+                    await _client.Call(ak.wwise.core.@object.create, new JObject(
+                        new JProperty("parent", parentPath),
+                        new JProperty("type", "Folder"),
+                        new JProperty("name", tempName),
+                        new JProperty("notes", actor.Notes)));
+
+                    var actorPath = $"\"{actor.Path.Replace("\\\\", "\\")}\"";
+                    var folderPath = $"{actor.Path.Replace("\\\\", "\\")}Temp";
+
+                    // Move children
+                    var childrenResult = await QueryWaapiAsync(_client, $"$ {actorPath} select children", new[] { "name", "id" });
+                    if (childrenResult[ReturnKey] is JArray children && children.Any())
                     {
-                        await _client.Call(ak.wwise.core.@object.move, new JObject(
-                            new JProperty("object", child["id"]),
-                            new JProperty("parent", folderPath)));
+                        foreach (var child in children)
+                        {
+                            await _client.Call(ak.wwise.core.@object.move, new JObject(
+                                new JProperty("object", child["id"]),
+                                new JProperty("parent", folderPath)));
+                        }
                     }
+
+                    // Delete original actor and rename folder
+                    await _client.Call(ak.wwise.core.@object.delete, new JObject(
+                        new JProperty("object", actor.Id)));
+
+                    await _client.Call(ak.wwise.core.@object.setName, new JObject(
+                        new JProperty("object", folderPath),
+                        new JProperty("value", actor.Name)));
                 }
 
-                // Delete original actor and rename folder
-                await _client.Call(ak.wwise.core.@object.delete, new JObject(
-                    new JProperty("object", actor.Id)));
+                await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                    new JProperty("displayName", "Sanitize Actor-Mixers")));
 
-                await _client.Call(ak.wwise.core.@object.setName, new JObject(
-                    new JProperty("object", folderPath),
-                    new JProperty("value", actor.Name)));
+                _isConverted = true;
             }
-
-            await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                new JProperty("displayName", "Sanitize Actor-Mixers")));
-
-            _isConverted = true;
-            IsConverting = false;
-            ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
+            {
+                if (!_isConnectionLost)
+                {
+                    await _client.Call(ak.wwise.core.undo.cancelGroup);
+                }
+                throw;
+            }
+            catch (Exception)
+            {
+                if (!_isConnectionLost)
+                {
+                    await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                        new JProperty("displayName", "Sanitize Actor-Mixers")));
+                }
+                throw;
+            }
+            finally
+            {
+                IsConverting = false;
+                ProjectStateChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         private static (string, string[]) BuildQueryStrings(string actorQuery, List<string> unityProperties)
@@ -320,7 +355,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return result[ReturnKey] as JArray;
         }
 
-        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors, Action<int, int> progressCallback = null)
+        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors, Action<int, int> progressCallback = null, System.Threading.CancellationToken cancellationToken = default)
         {
             var actorsToConvert = new JArray();
             int total = actors.Count;
@@ -328,6 +363,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
             foreach (var actor in actors)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 current++;
                 progressCallback?.Invoke(current, total);
                 var propertiesToCheck = new List<string>();
@@ -412,7 +448,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return actorsToConvert;
         }
 
-        private static async Task RemoveActorsWithActiveStates(IJsonClient client, JArray actorsToConvert)
+        private static async Task RemoveActorsWithActiveStates(IJsonClient client, JArray actorsToConvert, System.Threading.CancellationToken cancellationToken = default)
         {
             // Check if any state is present in the actor-mixers and create a temporary query if so
             // TODO: Improve waql query to check for active states only in the actor-mixer without unity properties diff
@@ -421,24 +457,33 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             if (stateReference[ReturnKey].Any())
             {
                 JObject stateQuery = await CreateTemporaryQuery(client);
-                await CreateTemporarySearchCriteria(client, stateReference, stateQuery["id"].ToString());
-
-                // Remove any actor-mixers with active states from the list of actors to convert
-                JObject activeStates = await QueryWaapiAsync(client, $"$ from query \"{stateQuery["id"]}\"", ["id"]);
-                foreach (JToken actor in activeStates[ReturnKey])
+                try
                 {
-                    var actorToRemove = actorsToConvert
-                        .FirstOrDefault(a => a["id"]?.ToString() == actor["id"]?.ToString());
+                    await CreateTemporarySearchCriteria(client, stateReference, stateQuery["id"].ToString());
 
-                    if (actorToRemove != null)
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Remove any actor-mixers with active states from the list of actors to convert
+                    JObject activeStates = await QueryWaapiAsync(client, $"$ from query \"{stateQuery["id"]}\"", ["id"]);
+                    foreach (JToken actor in activeStates[ReturnKey])
                     {
-                        actorsToConvert.Remove(actorToRemove);
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var actorToRemove = actorsToConvert
+                            .FirstOrDefault(a => a["id"]?.ToString() == actor["id"]?.ToString());
+
+                        if (actorToRemove != null)
+                        {
+                            actorsToConvert.Remove(actorToRemove);
+                        }
                     }
                 }
-
-                // Delete the temporary query
-                await client.Call(ak.wwise.core.@object.delete, new JObject(
-                                    new JProperty("object", stateQuery["id"].ToString())));
+                finally
+                {
+                    // Delete the temporary query
+                    await client.Call(ak.wwise.core.@object.delete, new JObject(
+                                        new JProperty("object", stateQuery["id"].ToString())));
+                }
             }
         }
 

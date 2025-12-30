@@ -1,5 +1,7 @@
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using CommunityToolkit.Mvvm.Input;
 
 namespace ActormixerSanitizer.UI.Services
 {
@@ -43,12 +45,13 @@ namespace ActormixerSanitizer.UI.Services
             });
         }
 
-        public async Task RunTaskWithProgress(string title, System.Func<IProgressDialog, System.Threading.Tasks.Task> work)
+        public async Task RunTaskWithProgress(string title, System.Func<IProgressDialog, CancellationToken, Task> work)
         {
+            var cts = new CancellationTokenSource();
             var dialog = new Dialogs.ProgressDialog(title, Application.Current.MainWindow);
-            var handle = new ProgressDialogHandle(dialog);
+            var handle = new ProgressDialogHandle(dialog, cts);
 
-            var workTask = work(handle);
+            var workTask = work(handle, cts.Token);
 
             _ = workTask.ContinueWith(t =>
             {
@@ -62,11 +65,20 @@ namespace ActormixerSanitizer.UI.Services
         private class ProgressDialogHandle : IProgressDialog
         {
             private readonly Dialogs.ProgressDialog _dialog;
+            private readonly CancellationTokenSource _cts;
 
-            public ProgressDialogHandle(Dialogs.ProgressDialog dialog)
+            public ProgressDialogHandle(Dialogs.ProgressDialog dialog, CancellationTokenSource cts)
             {
                 _dialog = dialog;
+                _cts = cts;
+                _dialog.CancelCommand = CancelCommand;
             }
+
+            public System.Windows.Input.ICommand CancelCommand => new RelayCommand(() =>
+            {
+                _cts.Cancel();
+                _dialog.Close();
+            });
 
             public void Update(double value, string text, string status)
             {
@@ -80,8 +92,7 @@ namespace ActormixerSanitizer.UI.Services
 
             public void Dispose()
             {
-                // No-op here, the handle is disposed by the caller,
-                // but the dialog is closed by RunTaskWithProgress.
+                _cts.Dispose();
             }
         }
     }

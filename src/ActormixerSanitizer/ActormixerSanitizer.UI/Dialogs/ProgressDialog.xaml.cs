@@ -34,6 +34,13 @@ namespace ActormixerSanitizer.UI.Dialogs
             set { _titleText = value; OnPropertyChanged(); }
         }
 
+        private System.Windows.Input.ICommand _cancelCommand;
+        public System.Windows.Input.ICommand CancelCommand
+        {
+            get => _cancelCommand;
+            set { _cancelCommand = value; OnPropertyChanged(); }
+        }
+
         public ProgressDialog(string title, Window owner)
         {
             InitializeComponent();
