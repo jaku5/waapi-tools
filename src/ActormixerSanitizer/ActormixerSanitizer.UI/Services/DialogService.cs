@@ -43,14 +43,20 @@ namespace ActormixerSanitizer.UI.Services
             });
         }
 
-        public IProgressDialog ShowProgressDialog(string title)
+        public async Task RunTaskWithProgress(string title, System.Func<IProgressDialog, System.Threading.Tasks.Task> work)
         {
-            return Application.Current.Dispatcher.Invoke(() =>
+            var dialog = new Dialogs.ProgressDialog(title, Application.Current.MainWindow);
+            var handle = new ProgressDialogHandle(dialog);
+
+            var workTask = work(handle);
+
+            _ = workTask.ContinueWith(t =>
             {
-                var dialog = new Dialogs.ProgressDialog(title, Application.Current.MainWindow);
-                dialog.Show();
-                return new ProgressDialogHandle(dialog);
+                dialog.Dispatcher.Invoke(() => dialog.Close());
             });
+
+            dialog.ShowDialog();
+            await workTask;
         }
 
         private class ProgressDialogHandle : IProgressDialog
@@ -66,15 +72,16 @@ namespace ActormixerSanitizer.UI.Services
             {
                 _dialog.Dispatcher.Invoke(() =>
                 {
-                    _dialog.ViewModel.ProgressValue = value;
-                    _dialog.ViewModel.ProgressText = text;
-                    _dialog.ViewModel.CurrentStatus = status;
+                    _dialog.ProgressValue = value;
+                    _dialog.ProgressText = text;
+                    _dialog.CurrentStatus = status;
                 });
             }
 
             public void Dispose()
             {
-                _dialog.Dispatcher.Invoke(() => _dialog.Close());
+                // No-op here, the handle is disposed by the caller,
+                // but the dialog is closed by RunTaskWithProgress.
             }
         }
     }

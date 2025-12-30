@@ -42,8 +42,8 @@ namespace ActormixerSanitizer.UI.Tests
             // Setup default behaviors
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>())).ReturnsAsync(new List<ActorMixerInfo>());
             
-            var progressMock = new Mock<IProgressDialog>();
-            _dialogServiceMock.Setup(d => d.ShowProgressDialog(It.IsAny<string>())).Returns(progressMock.Object);
+            _dialogServiceMock.Setup(d => d.RunTaskWithProgress(It.IsAny<string>(), It.IsAny<Func<IProgressDialog, Task>>()))
+                .Returns<string, Func<IProgressDialog, Task>>((title, work) => work(new Mock<IProgressDialog>().Object));
         }
 
         private void CreateViewModel()
@@ -63,7 +63,7 @@ namespace ActormixerSanitizer.UI.Tests
 
             // Assert
             _sanitizerServiceMock.Verify(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>()), Times.Once);
-            _dialogServiceMock.Verify(d => d.ShowProgressDialog(It.IsAny<string>()), Times.Once);
+            _dialogServiceMock.Verify(d => d.RunTaskWithProgress("Scanning Project", It.IsAny<Func<IProgressDialog, Task>>()), Times.Once);
         }
 
         [Fact]
@@ -172,9 +172,8 @@ namespace ActormixerSanitizer.UI.Tests
                 s => s.ConvertToFoldersAsync(It.Is<List<ActorMixerInfo>>(
                     list => list.Count == 1 && list[0].Id == "1"), It.IsAny<Action<int, int>>()), Times.Once);
             
-            // Should be called twice: once for Scan, once for Convert
-            _dialogServiceMock.Verify(d => d.ShowProgressDialog("Scanning Project"), Times.Once);
-            _dialogServiceMock.Verify(d => d.ShowProgressDialog("Converting to Folders"), Times.Once);
+            _dialogServiceMock.Verify(d => d.RunTaskWithProgress("Scanning Project", It.IsAny<Func<IProgressDialog, Task>>()), Times.Once);
+            _dialogServiceMock.Verify(d => d.RunTaskWithProgress("Converting to Folders", It.IsAny<Func<IProgressDialog, Task>>()), Times.Once);
         }
 
         [Fact]

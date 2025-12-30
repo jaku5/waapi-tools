@@ -389,35 +389,40 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
 
             IsDialogOpen = true;
-            using var progress = _dialogService.ShowProgressDialog("Scanning Project");
             try
             {
-                progress.Update(0, "Scanning...", "");
-                var markedIds = MarkedActors.Select(a => a.Id).ToHashSet();
-                var actors = await _service.GetSanitizableMixersAsync((current, total) =>
+                await _dialogService.RunTaskWithProgress("Scanning Project", async progress =>
                 {
-                    progress.Update((double)current / total * 100, $"Scanning: {current} of {total}", "");
-                });
-
-                ActorMixers.Clear();
-
-                if (actors != null)
-                {
-                    foreach (var actor in actors)
+                    progress.Update(0, "Scanning...", "");
+                    var markedIds = MarkedActors.Select(a => a.Id).ToHashSet();
+                    var actors = await _service.GetSanitizableMixersAsync((current, total) =>
                     {
-                        if (markedIds.Contains(actor.Id))
+                        progress.Update((double)current / total * 100, $"Scanning: {current} of {total}", "");
+                    });
+
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        ActorMixers.Clear();
+
+                        if (actors != null)
                         {
-                            actor.IsMarked = true;
+                            foreach (var actor in actors)
+                            {
+                                if (markedIds.Contains(actor.Id))
+                                {
+                                    actor.IsMarked = true;
+                                }
+                                ActorMixers.Add(actor);
+                            }
+                            AddLog($"Found {actors.Count} actor mixer{(actors.Count == 1 ? "" : "s")} that can be converted");
                         }
-                        ActorMixers.Add(actor);
-                    }
-                    AddLog($"Found {actors.Count} actor mixer{(actors.Count == 1 ? "" : "s")} that can be converted");
-                }
-                else
-                {
-                    AddLog("Scan returned no mixers.");
-                }
-                IsScanned = true;
+                        else
+                        {
+                            AddLog("Scan returned no mixers.");
+                        }
+                        IsScanned = true;
+                    });
+                });
             }
             catch (Exception ex)
             {
@@ -500,19 +505,24 @@ namespace ActormixerSanitizer.UI.ViewModels
                 return;
 
             IsDialogOpen = true;
-            using var progress = _dialogService.ShowProgressDialog("Converting to Folders");
             try
             {
-                progress.Update(0, "Converting...", "");
-                await _service.ConvertToFoldersAsync(markedActors, (current, total) =>
+                await _dialogService.RunTaskWithProgress("Converting to Folders", async progress =>
                 {
-                    progress.Update((double)current / total * 100, $"Converting: {current} of {total}", "");
-                });
+                    progress.Update(0, "Converting...", "");
+                    await _service.ConvertToFoldersAsync(markedActors, (current, total) =>
+                    {
+                        progress.Update((double)current / total * 100, $"Converting: {current} of {total}", "");
+                    });
 
-                foreach (var actor in markedActors)
-                {
-                    ActorMixers.Remove(actor);
-                }
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        foreach (var actor in markedActors)
+                        {
+                            ActorMixers.Remove(actor);
+                        }
+                    });
+                });
 
                 string message = $"Successfully converted {markedActors.Count} Actor-mixer{(markedActors.Count == 1 ? "" : "s")} to Virtual Folder{(markedActors.Count == 1 ? "" : "s")}.";
                 await _dialogService.ShowNotification("Conversion Successful", message);
