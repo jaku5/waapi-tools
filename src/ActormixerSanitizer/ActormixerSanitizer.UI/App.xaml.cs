@@ -48,6 +48,7 @@ namespace ActormixerSanitizer.UI
             services.AddSingleton<IJsonClient, JsonClient>();
             services.AddSingleton<IActormixerSanitizerService, ActormixerSanitizerService>();
             services.AddSingleton<Services.IDialogService, Services.DialogService>();
+            services.AddSingleton<Services.IDispatcherService, Services.DispatcherService>();
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<MainWindow>();
         }

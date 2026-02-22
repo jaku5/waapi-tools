@@ -21,6 +21,7 @@ namespace ActormixerSanitizer.UI.Tests
         private readonly Mock<ILogger<MainViewModel>> _loggerMock;
         private readonly Mock<IMessenger> _messengerMock;
         private readonly Mock<IDialogService> _dialogServiceMock;
+        private readonly Mock<IDispatcherService> _dispatcherServiceMock;
         private MainViewModel _viewModel;
 
         static MainViewModelTests()
@@ -38,17 +39,22 @@ namespace ActormixerSanitizer.UI.Tests
             _loggerMock = new Mock<ILogger<MainViewModel>>();
             _messengerMock = new Mock<IMessenger>();
             _dialogServiceMock = new Mock<IDialogService>();
+            _dispatcherServiceMock = new Mock<IDispatcherService>();
 
             // Setup default behaviors
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(new List<ActorMixerInfo>());
             
             _dialogServiceMock.Setup(d => d.RunTaskWithProgress(It.IsAny<string>(), It.IsAny<Func<IProgressDialog, System.Threading.CancellationToken, Task>>()))
                 .Returns<string, Func<IProgressDialog, System.Threading.CancellationToken, Task>>((title, work) => work(new Mock<IProgressDialog>().Object, System.Threading.CancellationToken.None));
+
+            _dispatcherServiceMock.Setup(d => d.InvokeAsync(It.IsAny<Action>()))
+                .Callback<Action>(action => action())
+                .Returns(Task.CompletedTask);
         }
 
         private void CreateViewModel()
         {
-            _viewModel = new MainViewModel(_sanitizerServiceMock.Object, _loggerMock.Object, _messengerMock.Object, _dialogServiceMock.Object);
+            _viewModel = new MainViewModel(_sanitizerServiceMock.Object, _loggerMock.Object, _messengerMock.Object, _dialogServiceMock.Object, _dispatcherServiceMock.Object);
         }
 
         [Fact]

@@ -23,6 +23,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         private readonly ILogger<MainViewModel> _logger;
         private readonly IMessenger _messenger;
         private readonly IDialogService _dialogService;
+        private readonly IDispatcherService _dispatcherService;
         private CancellationTokenSource _dialogCts = new CancellationTokenSource();
 
 
@@ -227,7 +228,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private IEnumerable<ActorMixerInfo> MarkedActors => ActorMixers.Where(a => a.IsMarked);
 
-        public MainViewModel(IActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger, IDialogService dialogService)
+        public MainViewModel(IActormixerSanitizerService service, ILogger<MainViewModel> logger, IMessenger messenger, IDialogService dialogService, IDispatcherService dispatcherService)
         {
             IsNotConnected = true;
 
@@ -235,6 +236,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             _logger = logger;
             _messenger = messenger;
             _dialogService = dialogService;
+            _dispatcherService = dispatcherService;
             _service.StatusUpdated += OnStatusUpdated;
             _service.NotificationRequested += OnNotificationRequested;
             _service.Disconnected += OnDisconnected;
@@ -319,7 +321,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnStatusUpdated(object sender, string message)
         {
-            await Application.Current.Dispatcher.InvokeAsync(() => AddLog(message));
+            await _dispatcherService.InvokeAsync(() => AddLog(message));
         }
 
         private void AddLog(string message)
@@ -400,7 +402,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                         progress.Update((double)current / total * 100, $"Scanning: {current} of {total}", "");
                     }, ct);
 
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    await _dispatcherService.InvokeAsync(() =>
                     {
                         ActorMixers.Clear();
 
@@ -519,7 +521,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                         progress.Update((double)current / total * 100, $"Converting: {current} of {total}", "");
                     }, ct);
 
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    await _dispatcherService.InvokeAsync(() =>
                     {
                         foreach (var actor in markedActors)
                         {
@@ -562,7 +564,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnDisconnected(object sender, EventArgs e)
         {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            await _dispatcherService.InvokeAsync(() =>
             {
                 AddLog("Disconnected from Wwise");
                 IsNotConnected = true;
@@ -571,7 +573,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnProjectStateChanged(object sender, EventArgs e)
         {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            await _dispatcherService.InvokeAsync(() =>
             {
                 IsDirty = _service.IsDirty;
                 IsSaved = _service.IsSaved;

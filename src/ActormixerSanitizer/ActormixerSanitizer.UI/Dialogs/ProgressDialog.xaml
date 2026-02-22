@@ -5,7 +5,7 @@
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         SizeToContent="Height"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         ShowInTaskbar="False">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0"
@@ -17,6 +17,18 @@
     </WindowChrome.WindowChrome>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="ButtonFocusVisualStyle">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border CornerRadius="6"
+                                BorderBrush="{DynamicResource FocusStrokeColorOuterBrush}"
+                                BorderThickness="2"
+                                Margin="-3"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     
     <Grid>
@@ -46,7 +58,7 @@
         </Grid>
 
         <Grid Grid.Row="1" Margin="20,24,20,24">
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="4,0,4,1" Padding="10,5" Height="32" HorizontalAlignment="Right" Width="80" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" Margin="4,0,4,1" Padding="10,5" Height="32" HorizontalAlignment="Right" Width="80" />
         </Grid>
     </Grid>
 </Window>
