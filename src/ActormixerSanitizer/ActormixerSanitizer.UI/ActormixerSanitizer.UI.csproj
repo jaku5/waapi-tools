@@ -37,6 +37,9 @@
 		<Resource Include="..\..\Resources\ObjectIcons_Folder_nor_light.png">
 			<Link>Resources\ObjectIcons_Folder_nor_light.png</Link>
 		</Resource>
+		<Resource Include="..\..\Resources\favicon.ico">
+			<Link>Resources\favicon.ico</Link>
+		</Resource>
 	</ItemGroup>
 
 

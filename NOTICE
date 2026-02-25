@@ -1,0 +1,19 @@
+Waapi Tools
+Copyright 2026 JP Audio
+
+This product includes software developed by:
+- Audiokinetic Inc. (https://www.audiokinetic.com/)
+  Licensed under the Apache License, Version 2.0.
+
+This product includes third-party software and assets:
+- Microsoft Fluent UI System Icons (https://github.com/microsoft/fluentui-system-icons)
+  Licensed under the MIT License. Copyright (c) 2020 Microsoft Corporation.
+
+- Newtonsoft.Json (https://github.com/JamesNK/Newtonsoft.Json)
+  Licensed under the MIT License. Copyright (c) 2007 James Newton-King.
+
+- CommunityToolkit.Mvvm (https://github.com/CommunityToolkit/dotnet)
+  Licensed under the MIT License. Copyright (c) .NET Foundation and Contributors.
+
+- Microsoft.Extensions.Logging (https://github.com/dotnet/runtime)
+  Licensed under the MIT License. Copyright (c) .NET Foundation and Contributors.

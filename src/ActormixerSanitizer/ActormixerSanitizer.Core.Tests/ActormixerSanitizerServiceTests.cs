@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Models;
+using System;
 
 namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Tests
 {
@@ -565,6 +566,35 @@ new JProperty("id", ancestorId),
       _clientMock.Setup(c => c.Call(ak.wwise.core.@object.move, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>())).ReturnsAsync(success);
       _clientMock.Setup(c => c.Call(ak.wwise.core.@object.delete, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>())).ReturnsAsync(success);
       _clientMock.Setup(c => c.Call(ak.wwise.core.@object.setName, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>())).ReturnsAsync(success);
+    }
+
+    [Fact]
+    public async Task ConvertToFoldersAsync_WhenCancelled_RollsBackChanges()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      var cts = new System.Threading.CancellationTokenSource();
+      cts.Cancel(); // Cancel immediately
+
+      var actors = new List<ActorMixerInfo>
+      {
+        new ActorMixerInfo
+        {
+            Id = "{AM-1}",
+            Name = "Mixer1",
+            Path = "\\Actor-Mixer Hierarchy\\Default Work Unit\\Mixer1",
+            Notes = "Note1"
+        }
+      };
+
+      // Act & Assert
+      await Assert.ThrowsAsync<OperationCanceledException>(() => _service!.ConvertToFoldersAsync(actors, null, cts.Token));
+
+      // Verify rollback occurred: endGroup then undoLast
+      _clientMock!.Verify(c => c.Call(ak.wwise.core.undo.endGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+      _clientMock!.Verify(c => c.Call(ak.wwise.core.undo.undoLast, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Once);
     }
   }
 }

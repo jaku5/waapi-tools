@@ -217,6 +217,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                     await _client.Call(ak.wwise.core.undo.cancelGroup);
                     await SubscribeToChangesAsync();
                 }
+                await CheckProjectStateAsync();
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -310,7 +311,9 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             {
                 if (!_isConnectionLost)
                 {
-                    await _client.Call(ak.wwise.core.undo.cancelGroup);
+                    await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                        new JProperty("displayName", "Sanitize Actor-Mixers")));
+                    await _client.Call(ak.wwise.core.undo.undoLast);
                 }
                 throw;
             }
@@ -326,6 +329,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             finally
             {
                 IsConverting = false;
+                await CheckProjectStateAsync();
                 ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
