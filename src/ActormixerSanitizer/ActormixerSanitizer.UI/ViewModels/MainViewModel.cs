@@ -314,14 +314,29 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnNotificationRequested(object sender, string message)
         {
-            IsDialogOpen = true;
-            await _dialogService.ShowNotification("Notification", message);
-            IsDialogOpen = false;
+            try
+            {
+                IsDialogOpen = true;
+                await _dialogService.ShowNotification("Notification", message);
+                IsDialogOpen = false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error showing notification");
+                IsDialogOpen = false;
+            }
         }
 
         private async void OnStatusUpdated(object sender, string message)
         {
-            await _dispatcherService.InvokeAsync(() => AddLog(message));
+            try
+            {
+                await _dispatcherService.InvokeAsync(() => AddLog(message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating status");
+            }
         }
 
         private void AddLog(string message)
@@ -564,25 +579,39 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         private async void OnDisconnected(object sender, EventArgs e)
         {
-            await _dispatcherService.InvokeAsync(() =>
+            try
             {
-                AddLog("Disconnected from Wwise");
-                IsNotConnected = true;
-            });
+                await _dispatcherService.InvokeAsync(() =>
+                {
+                    AddLog("Disconnected from Wwise");
+                    IsNotConnected = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling disconnection");
+            }
         }
 
         private async void OnProjectStateChanged(object sender, EventArgs e)
         {
-            await _dispatcherService.InvokeAsync(() =>
+            try
             {
-                IsDirty = _service.IsDirty;
-                IsSaved = _service.IsSaved;
-                IsConverted = _service.IsConverted;
-                IsConnectionLost = _service.IsConnectionLost;
-                IsScanned = _service.IsScanned;
-                OnPropertyChanged(nameof(IsScanning));
-                NotifyStateChanged();
-            });
+                await _dispatcherService.InvokeAsync(() =>
+                {
+                    IsDirty = _service.IsDirty;
+                    IsSaved = _service.IsSaved;
+                    IsConverted = _service.IsConverted;
+                    IsConnectionLost = _service.IsConnectionLost;
+                    IsScanned = _service.IsScanned;
+                    OnPropertyChanged(nameof(IsScanning));
+                    NotifyStateChanged();
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling project state change");
+            }
         }
 
         private async Task SelectInWwise(string actorId)

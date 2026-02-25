@@ -100,9 +100,16 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         private async void OnCommandExecuted(JObject json)
         {
-            if (_wwiseCommands.Contains(json["command"].ToString()))
+            try
             {
-                await CheckProjectStateAsync();
+                if (_wwiseCommands.Contains(json["command"].ToString()))
+                {
+                    await CheckProjectStateAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing command.executed event");
             }
         }
 

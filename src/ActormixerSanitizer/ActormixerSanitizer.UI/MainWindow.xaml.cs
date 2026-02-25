@@ -54,9 +54,16 @@ namespace ActormixerSanitizer.UI
 
         private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
+            try
             {
-                await vm.Cleanup();
+                if (DataContext is MainViewModel vm)
+                {
+                    await vm.Cleanup();
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup during shutdown — nothing to do if it fails
             }
         }
     }
