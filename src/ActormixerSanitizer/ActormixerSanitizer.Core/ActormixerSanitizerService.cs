@@ -12,7 +12,11 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
         private const string ObjectGetUri = ak.wwise.core.@object.get;
-        private const string ActorCandidatesQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")";
+        private int _wwiseYear = 0;
+        private string ActorMixerType => _wwiseYear >= 2025 ? "PropertyContainer" : "actormixer";
+        private int ActorMixerObjectId => _wwiseYear >= 2025 ? 100 : 10;
+        public string ActorMixerName => _wwiseYear >= 2025 ? "Property Container" : "Actor-Mixer";
+        public string ActorMixerNamePlural => _wwiseYear >= 2025 ? "Property Containers" : "Actor-Mixers";
         private readonly static List<string> _unityProperties = new List<string> { "Volume", "Pitch", "Lowpass", "Highpass", "MakeUpGain" };
         private readonly static List<string> _wwiseCommands = new List<string> { "Undo", "Redo" };
 
@@ -164,6 +168,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
                 var info = await _client.Call(ak.wwise.core.getInfo);
                 WwiseVersion = info?["version"]?["displayName"]?.ToString();
+                _wwiseYear = info?["version"]?["year"]?.Value<int>() ?? 0;
             }
             catch (Exception ex)
             {
@@ -175,19 +180,26 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
         public async Task<List<ActorMixerInfo>> GetSanitizableMixersAsync(Action<int, int>? progressCallback = null, System.Threading.CancellationToken cancellationToken = default)
         {
-            _isSaved = false;
-            _isConverted = false;
-            _isScanned = true;
             _isConnectionLost = false;
 
             ProjectStateChanged?.Invoke(this, EventArgs.Empty);
             await UnsubscribeFromChangesAsync();
-
-            await _client.Call(ak.wwise.core.undo.beginGroup);
+            
+            bool tempQueryCreated = false;
+            bool needsUndoGroup = _wwiseYear < 2025;
+            if (needsUndoGroup)
+            {
+                await _client.Call(ak.wwise.core.undo.beginGroup);
+            }
 
             try
             {
-                var actorQuery = BuildQueryStrings(ActorCandidatesQuery, _unityProperties);
+                var candidatesQuery = $"$ from type {ActorMixerType} where ancestors.any(type = \"{ActorMixerType}\")";
+                if (_wwiseYear >= 2025)
+                {
+                    candidatesQuery += " and !customStates.any()";
+                }
+                var actorQuery = BuildQueryStrings(candidatesQuery, _unityProperties);
                 var actors = await GetActorMixersAsync(_client, actorQuery.Item1, actorQuery.Item2);
 
                 if (actors == null || !actors.Any())
@@ -202,10 +214,14 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                     progressCallback?.Invoke(current, total);
                     StatusUpdated?.Invoke(this, $"Processing: {current} of {total}");
                     _logger.LogInformation($"Processing: {current} of {total}");
-                }, cancellationToken);
-                await RemoveActorsWithActiveStates(_client, processedActors, cancellationToken);
+                }, ActorMixerType, cancellationToken);
                 
-                return processedActors.Select(a => new ActorMixerInfo
+                if (needsUndoGroup)
+                {
+                    tempQueryCreated = await RemoveActorsWithActiveStates(_client, processedActors, ActorMixerType, ActorMixerObjectId, cancellationToken);
+                }
+
+                var result = processedActors.Select(a => new ActorMixerInfo
                 {
                     Id = a["id"]?.ToString(),
                     Name = a["name"]?.ToString(),
@@ -215,13 +231,31 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                     AncestorId = a["ancestor.id"]?.ToString(),
                     AncestorName = a["ancestor.name"]?.ToString()
                 }).ToList();
+
+                _isSaved = false;
+                _isConverted = false;
+                _isScanned = true;
+                return result;
             }
             finally
             {
                 IsScanning = false;
                 if (!_isConnectionLost)
                 {
-                    await _client.Call(ak.wwise.core.undo.cancelGroup);
+                    if (needsUndoGroup)
+                    {
+                        if (cancellationToken.IsCancellationRequested || !tempQueryCreated)
+                        {
+                            await _client.Call(ak.wwise.core.undo.cancelGroup);
+                        }
+                        else
+                        {
+                            await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                                new JProperty("displayName", "Create and remove temp query")));
+
+                            await _client.Call(ak.wwise.core.undo.undoLast);
+                        }
+                    }
                     await SubscribeToChangesAsync();
                 }
                 await CheckProjectStateAsync();
@@ -310,7 +344,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 }
 
                 await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                    new JProperty("displayName", "Sanitize Actor-Mixers")));
+                    new JProperty("displayName", $"Sanitize {ActorMixerNamePlural}")));
 
                 _isConverted = true;
             }
@@ -319,7 +353,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 if (!_isConnectionLost)
                 {
                     await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                        new JProperty("displayName", "Sanitize Actor-Mixers")));
+                        new JProperty("displayName", $"Sanitize {ActorMixerNamePlural}")));
                     await _client.Call(ak.wwise.core.undo.undoLast);
                 }
                 throw;
@@ -329,7 +363,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 if (!_isConnectionLost)
                 {
                     await _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                        new JProperty("displayName", "Sanitize Actor-Mixers")));
+                        new JProperty("displayName", $"Sanitize {ActorMixerNamePlural}")));
                 }
                 throw;
             }
@@ -362,7 +396,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return result[ReturnKey] as JArray;
         }
 
-        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors, Action<int, int> progressCallback = null, System.Threading.CancellationToken cancellationToken = default)
+        private static async Task<JArray> ProcessActorsAsync(IJsonClient client, JArray actors, Action<int, int> progressCallback = null, string actorMixerType = "actormixer", System.Threading.CancellationToken cancellationToken = default)
         {
             var actorsToConvert = new JArray();
             int total = actors.Count;
@@ -382,7 +416,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
 
                 // Get actor's first actor-mixer type ancestor
                 // TODO: Check if can be simplified
-                JObject ancestorsResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select ancestors.first(type = \"actormixer\")", new string[] { "id", "name" });
+                JObject ancestorsResult = await QueryWaapiAsync(client, $"$ \"{actor["id"]}\" select ancestors.first(type = \"{actorMixerType}\")", new string[] { "id", "name" });
 
                 var ancestorsArray = ancestorsResult?[ReturnKey] as JArray;
 
@@ -455,15 +489,16 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
             return actorsToConvert;
         }
 
-        private static async Task RemoveActorsWithActiveStates(IJsonClient client, JArray actorsToConvert, System.Threading.CancellationToken cancellationToken = default)
+        private static async Task<bool> RemoveActorsWithActiveStates(IJsonClient client, JArray actorsToConvert, string actorMixerType, int actorMixerObjectId, System.Threading.CancellationToken cancellationToken = default)
         {
             // Check if any state is present in the actor-mixers and create a temporary query if so
             // TODO: Improve waql query to check for active states only in the actor-mixer without unity properties diff
-            JObject stateReference = await QueryWaapiAsync(client, "$ from type stateGroup where referencesTo.any(type = \"actormixer\" and ancestors.any(type = \"actormixer\")) select children where name != \"None\"", ["id"]);
+            JObject stateReference = await QueryWaapiAsync(client, $"$ from type stateGroup where referencesTo.any(type = \"{actorMixerType}\" and ancestors.any(type = \"{actorMixerType}\")) select children", ["id"]);
 
             if (stateReference[ReturnKey].Any())
             {
-                JObject stateQuery = await CreateTemporaryQuery(client);
+                var actorsToQuery = $"$ from type {actorMixerType} where ancestors.any(type = \"{actorMixerType}\")";
+                JObject stateQuery = await CreateTemporaryQuery(client, actorsToQuery, actorMixerObjectId);
                 try
                 {
                     await CreateTemporarySearchCriteria(client, stateReference, stateQuery["id"].ToString());
@@ -491,17 +526,19 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                     await client.Call(ak.wwise.core.@object.delete, new JObject(
                                         new JProperty("object", stateQuery["id"].ToString())));
                 }
+                return true;
             }
+            return false;
         }
 
-        private static async Task<JObject> CreateTemporaryQuery(IJsonClient client, string actorsToQuery = "$ from type actormixer where ancestors.any(type = \"actormixer\")")
+        private static async Task<JObject> CreateTemporaryQuery(IJsonClient client, string actorsToQuery, int objectTypeId)
         {
             return await client.Call(ak.wwise.core.@object.create, new JObject(
                 new JProperty("parent", "\\Queries\\Default Work Unit"),
                 new JProperty("type", "Query"),
                 new JProperty("name", "TemporaryStateQuery"),
                 new JProperty("@LogicalOperator", "1"),
-                new JProperty("@ObjectType", "10"),
+                new JProperty("@ObjectType", objectTypeId.ToString()),
                 new JProperty("@WAQL", actorsToQuery)));
         }
 

@@ -171,6 +171,8 @@ namespace ActormixerSanitizer.UI.ViewModels
 
         public string ProjectName => _service.ProjectName;
         public string WwiseVersion => _service.WwiseVersion;
+        public string ActorMixerName => _service.ActorMixerName ?? "Actor-Mixer";
+        public string ActorMixerNamePlural => _service.ActorMixerNamePlural ?? "Actor-Mixers";
 
         public bool CanConnect => IsNotConnected && !IsConnecting;
         public bool ShowConnectingProgress => IsConnecting;
@@ -180,7 +182,7 @@ namespace ActormixerSanitizer.UI.ViewModels
         {
             get
             {
-                string baseTitle = "Actormixer Sanitizer";
+                string baseTitle = $"{ActorMixerName.Replace("-", "")} Sanitizer";
                 if (IsConnecting) return $"{baseTitle} - [Connecting...]";
                 if (IsNotConnected) return $"{baseTitle} - [Disconnected]";
                 
@@ -310,6 +312,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             OnPropertyChanged(nameof(ShowConnectionIcon));
             OnPropertyChanged(nameof(IsBusy));
             OnPropertyChanged(nameof(IsConverting));
+            OnPropertyChanged(nameof(ActorMixerName));
+            OnPropertyChanged(nameof(ActorMixerNamePlural));
         }
 
         private async void OnNotificationRequested(object sender, string message)
@@ -431,7 +435,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                                 }
                                 ActorMixers.Add(actor);
                             }
-                            AddLog($"Found {actors.Count} actor mixer{(actors.Count == 1 ? "" : "s")} that can be converted");
+                            AddLog($"Found {actors.Count} {(actors.Count == 1 ? ActorMixerName : ActorMixerNamePlural)} that can be converted");
                         }
                         else
                         {
@@ -520,7 +524,7 @@ namespace ActormixerSanitizer.UI.ViewModels
 
             var confirmed = await _dialogService.ShowConfirmationDialog(
                 "Confirm Conversion",
-                $"Are you sure you want to convert {markedActors.Count} actor-mixer{(markedActors.Count == 1 ? "" : "s")}?");
+                $"Are you sure you want to convert {markedActors.Count} {(markedActors.Count == 1 ? ActorMixerName.ToLower() : ActorMixerNamePlural.ToLower())}?");
 
             if (!confirmed)
                 return;
@@ -545,7 +549,7 @@ namespace ActormixerSanitizer.UI.ViewModels
                     });
                 });
 
-                string message = $"Successfully converted {markedActors.Count} Actor-mixer{(markedActors.Count == 1 ? "" : "s")} to Virtual Folder{(markedActors.Count == 1 ? "" : "s")}.";
+                string message = $"Successfully converted {markedActors.Count} {(markedActors.Count == 1 ? ActorMixerName : ActorMixerNamePlural)} to Virtual Folder{(markedActors.Count == 1 ? "" : "s")}.";
                 await _dialogService.ShowNotification("Conversion Successful", message);
                 OnPropertyChanged(nameof(IsMarkingEnabled));
                 OnPropertyChanged(nameof(IsShowMarkedListEnabled));

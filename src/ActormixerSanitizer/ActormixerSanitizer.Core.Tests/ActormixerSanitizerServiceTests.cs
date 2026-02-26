@@ -53,7 +53,7 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core.Tests
  {
    var waql = args?["waql"]?.Value<string>() ?? "";
 
-   if (waql.StartsWith("$ from type actormixer"))
+   if (waql.Contains("from type actormixer") || waql.Contains("from type PropertyContainer"))
      return Task.FromResult(actorMixersResult);
    else if (waql.Contains("select ancestors.first"))
      return Task.FromResult(ancestorResult);
@@ -595,6 +595,152 @@ new JProperty("id", ancestorId),
       // Verify rollback occurred: endGroup then undoLast
       _clientMock!.Verify(c => c.Call(ak.wwise.core.undo.endGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Once);
       _clientMock!.Verify(c => c.Call(ak.wwise.core.undo.undoLast, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WhenWwise2025_DetectsYearAndNomenclature()
+    {
+      // Arrange
+      SetupTest();
+      
+      var projectInfo = new JObject(new JProperty("name", "TestProject"));
+      var wwiseInfo = new JObject(
+          new JProperty("version", new JObject(
+              new JProperty("displayName", "v2025.1.0"),
+              new JProperty("year", 2025),
+              new JProperty("major", 1)
+          ))
+      );
+
+      _clientMock!.Setup(c => c.Call(ak.wwise.core.getProjectInfo, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+          .ReturnsAsync(projectInfo);
+      _clientMock!.Setup(c => c.Call(ak.wwise.core.getInfo, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+          .ReturnsAsync(wwiseInfo);
+
+      // Act
+      await _service!.ConnectAsync();
+
+      // Assert
+      Assert.Equal("Property Container", _service.ActorMixerName);
+      Assert.Equal("Property Containers", _service.ActorMixerNamePlural);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenWwise2025_UsesPropertyContainerWAQL()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      // Connect as 2025
+      var wwiseInfo = new JObject(new JProperty("version", new JObject(new JProperty("year", 2025))));
+      _clientMock!.Setup(c => c.Call(ak.wwise.core.getInfo, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+          .ReturnsAsync(wwiseInfo);
+      await _service!.ConnectAsync();
+
+      var actorMixersResult = new JObject(new JProperty("return", new JArray(
+          new JObject(new JProperty("id", "{ID}"), new JProperty("name", "PC"), new JProperty("path", "\\PC"),
+                      new JProperty("Volume", 0), new JProperty("Pitch", 0), new JProperty("Lowpass", 0), new JProperty("Highpass", 0), new JProperty("MakeUpGain", 0))
+      )));
+      var ancestorResult = new JObject(new JProperty("return", new JArray(new JObject(new JProperty("id", "{ANC}"), new JProperty("name", "ANC")))));
+      
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, new JObject(new JProperty("properties", new JArray())), 
+                            new JObject(new JProperty("return", new JArray())), new JObject(new JProperty("return", new JArray())), new JObject(new JProperty("return", new JArray())));
+
+      // Act
+      await _service.GetSanitizableMixersAsync();
+
+      // Assert
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.get, 
+          It.Is<JObject>(o => o["waql"]!.ToString().Contains("from type PropertyContainer") && o["waql"]!.ToString().Contains("and !customStates.any()")), 
+          It.IsAny<JObject>(), It.IsAny<int>()), Times.AtLeastOnce);
+          
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.get, 
+          It.Is<JObject>(o => o["waql"]!.ToString().Contains("select ancestors.first(type = \"PropertyContainer\")")), 
+          It.IsAny<JObject>(), It.IsAny<int>()), Times.AtLeastOnce);
+
+      _clientMock.Verify(c => c.Call(ak.wwise.core.undo.beginGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenLegacyWwise_UsesActorMixerWAQL()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      // Connect as 2024 (Legacy)
+      var wwiseInfo = new JObject(new JProperty("version", new JObject(new JProperty("year", 2024))));
+      _clientMock!.Setup(c => c.Call(ak.wwise.core.getInfo, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+          .ReturnsAsync(wwiseInfo);
+      await _service!.ConnectAsync();
+
+      var actorMixersResult = new JObject(new JProperty("return", new JArray(
+          new JObject(new JProperty("id", "{ID}"), new JProperty("name", "AM"), new JProperty("path", "\\AM"),
+                      new JProperty("Volume", 0), new JProperty("Pitch", 0), new JProperty("Lowpass", 0), new JProperty("Highpass", 0), new JProperty("MakeUpGain", 0))
+      )));
+      var ancestorResult = new JObject(new JProperty("return", new JArray(new JObject(new JProperty("id", "{ANC}"), new JProperty("name", "ANC")))));
+      
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, new JObject(new JProperty("properties", new JArray())), 
+                            new JObject(new JProperty("return", new JArray())), new JObject(new JProperty("return", new JArray())), new JObject(new JProperty("return", new JArray())));
+
+      // Act
+      await _service.GetSanitizableMixersAsync();
+
+      // Assert
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.get, 
+          It.Is<JObject>(o => o["waql"]!.ToString().Contains("from type actormixer")), 
+          It.IsAny<JObject>(), It.IsAny<int>()), Times.AtLeastOnce);
+          
+      _clientMock.Verify(c => c.Call(ak.wwise.core.@object.get, 
+          It.Is<JObject>(o => o["waql"]!.ToString().Contains("select ancestors.first(type = \"actormixer\")")), 
+          It.IsAny<JObject>(), It.IsAny<int>()), Times.AtLeastOnce);
+
+      _clientMock.Verify(c => c.Call(ak.wwise.core.undo.beginGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.AtLeastOnce);
+    }
+    [Fact]
+    public async Task GetSanitizableMixersAsync_WhenCancelled_CallsCancelGroup()
+    {
+      // Arrange
+      SetupTest();
+      SetupDefaultMocks();
+
+      // Connect as Legacy (to trigger undo group)
+      var wwiseInfo = new JObject(new JProperty("version", new JObject(new JProperty("year", 2024))));
+      _clientMock!.Setup(c => c.Call(ak.wwise.core.getInfo, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+          .ReturnsAsync(wwiseInfo);
+      await _service!.ConnectAsync();
+
+      _clientMock.Setup(c => c.Call(ak.wwise.core.undo.cancelGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()))
+          .ReturnsAsync(new JObject());
+
+      var cts = new System.Threading.CancellationTokenSource();
+      
+      // Setup actors to throw cancellation during processing
+      var actorMixersResult = new JObject(new JProperty("return", new JArray(
+          new JObject(new JProperty("id", "{ID}"), new JProperty("name", "AM"), new JProperty("path", "\\AM"),
+                      new JProperty("Volume", 0), new JProperty("Pitch", 0), new JProperty("Lowpass", 0), new JProperty("Highpass", 0), new JProperty("MakeUpGain", 0))
+      )));
+      var ancestorResult = new JObject(new JProperty("return", new JArray(new JObject(new JProperty("id", "{ANC}"), new JProperty("name", "ANC")))));
+      
+      SetupWaapiCallsForTest(actorMixersResult, ancestorResult, new JObject(new JProperty("properties", new JArray())), 
+                            new JObject(new JProperty("return", new JArray())), new JObject(new JProperty("return", new JArray())), new JObject(new JProperty("return", new JArray())));
+
+      // Cancel before Act
+      cts.Cancel();
+
+      // Act & Assert
+      await Assert.ThrowsAsync<OperationCanceledException>(() => _service.GetSanitizableMixersAsync(null, cts.Token));
+
+      // Verify cancelGroup was called
+      _clientMock.Verify(c => c.Call(ak.wwise.core.undo.cancelGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Once);
+      
+      // Verify endGroup and undoLast were NOT called
+      _clientMock.Verify(c => c.Call(ak.wwise.core.undo.endGroup, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Never);
+      _clientMock.Verify(c => c.Call(ak.wwise.core.undo.undoLast, It.IsAny<object>(), It.IsAny<object>(), It.IsAny<int>()), Times.Never);
+
+      // Verify IsScanned is false
+      Assert.False(_service.IsScanned);
     }
   }
 }

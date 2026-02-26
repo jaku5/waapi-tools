@@ -47,6 +47,9 @@ namespace ActormixerSanitizer.UI.Tests
             _dialogServiceMock.Setup(d => d.RunTaskWithProgress(It.IsAny<string>(), It.IsAny<Func<IProgressDialog, System.Threading.CancellationToken, Task>>()))
                 .Returns<string, Func<IProgressDialog, System.Threading.CancellationToken, Task>>((title, work) => work(new Mock<IProgressDialog>().Object, System.Threading.CancellationToken.None));
 
+            _sanitizerServiceMock.Setup(s => s.ActorMixerName).Returns("Actor-Mixer");
+            _sanitizerServiceMock.Setup(s => s.ActorMixerNamePlural).Returns("Actor-Mixers");
+
             _dispatcherServiceMock.Setup(d => d.InvokeAsync(It.IsAny<Action>()))
                 .Callback<Action>(action => action())
                 .Returns(Task.CompletedTask);
@@ -442,6 +445,82 @@ namespace ActormixerSanitizer.UI.Tests
             // Assert
             Assert.Contains("MyProject", _viewModel.WindowTitle);
             Assert.Contains("2022.1", _viewModel.WindowTitle);
+        }
+
+        [Fact]
+        public void WindowTitle_WhenLegacyWwise_UsesActorMixerNomenclature()
+        {
+            // Arrange
+            _sanitizerServiceMock.Setup(s => s.ActorMixerName).Returns("Actor-Mixer");
+            CreateViewModel();
+            _viewModel.IsNotConnected = false;
+
+            // Assert
+            Assert.StartsWith("ActorMixer Sanitizer", _viewModel.WindowTitle);
+        }
+
+        [Fact]
+        public void WindowTitle_WhenWwise2025_UsesPropertyContainerNomenclature()
+        {
+            // Arrange
+            _sanitizerServiceMock.Setup(s => s.ActorMixerName).Returns("Property Container");
+            CreateViewModel();
+            _viewModel.IsNotConnected = false;
+
+            // Assert
+            Assert.StartsWith("Property Container Sanitizer", _viewModel.WindowTitle);
+        }
+
+        [Fact]
+        public async Task ConvertCommand_WhenLegacyWwise_ShowsActorMixerConfirmation()
+        {
+            // Arrange
+            _sanitizerServiceMock.Setup(s => s.ActorMixerName).Returns("Actor-Mixer");
+            _sanitizerServiceMock.Setup(s => s.ActorMixerNamePlural).Returns("Actor-Mixers");
+            CreateViewModel();
+            
+            var mixers = new List<ActorMixerInfo> { new ActorMixerInfo { Id = "1", Name = "M1", IsMarked = true } };
+            _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(mixers);
+            _dialogServiceMock.Setup(d => d.ShowConfirmationDialog(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false); // Stop at confirmation
+
+            await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
+            _viewModel.ActorMixers[0].IsMarked = true;
+            _viewModel.IsNotConnected = false;
+
+            // Act
+            await ((IAsyncRelayCommand)_viewModel.ConvertCommand).ExecuteAsync(null);
+
+            // Assert
+            _dialogServiceMock.Verify(d => d.ShowConfirmationDialog(
+                It.IsAny<string>(), 
+                It.Is<string>(m => m.Contains("actor-mixer"))), Times.Once);
+        }
+
+        [Fact]
+        public async Task ConvertCommand_WhenWwise2025_ShowsPropertyContainerConfirmation()
+        {
+            // Arrange
+            _sanitizerServiceMock.Setup(s => s.ActorMixerName).Returns("Property Container");
+            _sanitizerServiceMock.Setup(s => s.ActorMixerNamePlural).Returns("Property Containers");
+            CreateViewModel();
+            
+            var mixers = new List<ActorMixerInfo> { new ActorMixerInfo { Id = "1", Name = "M1", IsMarked = true } };
+            _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(mixers);
+            _dialogServiceMock.Setup(d => d.ShowConfirmationDialog(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false); // Stop at confirmation
+
+            await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
+            _viewModel.ActorMixers[0].IsMarked = true;
+            _viewModel.IsNotConnected = false;
+
+            // Act
+            await ((IAsyncRelayCommand)_viewModel.ConvertCommand).ExecuteAsync(null);
+
+            // Assert
+            _dialogServiceMock.Verify(d => d.ShowConfirmationDialog(
+                It.IsAny<string>(), 
+                It.Is<string>(m => m.Contains("property container"))), Times.Once);
         }
     }
 }

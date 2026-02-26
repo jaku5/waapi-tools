@@ -110,13 +110,13 @@
                 <StackPanel Grid.Column="3" Orientation="Horizontal">
                     <Button Command="{Binding MarkAllCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
-							ToolTip="Mark All"
+							ToolTip="{Binding ActorMixerNamePlural, StringFormat='Mark All {0}'}"
                             IsEnabled="{Binding IsMarkingEnabled}">
                         <TextBlock Style="{StaticResource FluentIcon}">&#xe8b3;</TextBlock>
                     </Button>
                     <Button Command="{Binding UnmarkAllCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
-							ToolTip="Unmark All"
+							ToolTip="{Binding ActorMixerNamePlural, StringFormat='Unmark All {0}'}"
                             IsEnabled="{Binding IsMarkingEnabled}">
                         <TextBlock Style="{StaticResource FluentIcon}">&#xe8e6;</TextBlock>
                     </Button>
@@ -131,7 +131,7 @@
                 <Separator Grid.Column="4"  Margin="10,0,10,0"/>
                 <Button Grid.Column="5" Command="{Binding ShowMarkedListCommand}"
 							Width="60"  Height="45" Margin="0,0,10,0"
-							ToolTip="Show Marked List"
+							ToolTip="{Binding ActorMixerNamePlural, StringFormat='Show Marked {0} in Wwise'}"
                             IsEnabled="{Binding IsShowMarkedListEnabled}">
                     <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ShowMarkedListIcon}"/>
                 </Button>
@@ -251,7 +251,7 @@
 
         <Button Grid.Row="5" Command="{Binding ConvertCommand}"
 			Height="45" HorizontalAlignment="Stretch" Margin="0,0,0,0"
-			ToolTip="Convert Marked to Folders"
+			ToolTip="{Binding ActorMixerNamePlural, StringFormat='Convert Marked {0} to Folders'}"
 			IsEnabled="{Binding IsMarkingEnabled}">
             <StackPanel Orientation="Horizontal">
                 <Image Source="{Binding ActorIcon}" Margin="0,0,30,0" Width="24" Height="24" Visibility="{Binding IsMarkingEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
