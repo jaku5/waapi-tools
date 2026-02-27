@@ -288,18 +288,59 @@ namespace ActormixerSanitizer.UI.Tests
         }
 
         [Fact]
-        public async Task ScanCommand_WhenServiceReturnsNull_HandlesGracefully()
+        public async Task ScanCommand_WhenServiceReturnsNull_HandlesGracefullyAndSetsIsScanned()
         {
-            // Arrange
+            // Arrange: null means edge case 1 — no objects of this type in the project at all
             CreateViewModel();
             _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
             _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((List<ActorMixerInfo>)null!);
+            _dialogServiceMock.Setup(d => d.ShowNotification(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
 
             // Act
             await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
 
-            // Assert - should not crash, collection should be empty or unaffected
+            // Assert
             Assert.NotNull(_viewModel.ActorMixers);
+            Assert.Empty(_viewModel.ActorMixers);
+            Assert.True(_viewModel.IsScanned);
+        }
+
+        [Fact]
+        public async Task ScanCommand_WhenNoObjectsOfTypeInProject_ShowsInfoNotification()
+        {
+            // Arrange: null return = no actor-mixers/property containers exist at all in the project
+            CreateViewModel();
+            _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((List<ActorMixerInfo>)null!);
+            _dialogServiceMock.Setup(d => d.ShowNotification(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+            // Act
+            await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
+
+            // Assert: a "Scan Complete" notification should be shown (not a congratulations)
+            _dialogServiceMock.Verify(d => d.ShowNotification(
+                "Scan Complete",
+                It.Is<string>(m => m.Contains("Actor-Mixers"))), Times.Once);
+        }
+
+        [Fact]
+        public async Task ScanCommand_WhenObjectsExistButNoneAreCandidates_ShowsCongratulationsNotification()
+        {
+            // Arrange: empty list = objects exist but none need conversion (edge case 2)
+            CreateViewModel();
+            _sanitizerServiceMock.Setup(s => s.CheckProjectStateAsync()).ReturnsAsync(false);
+            _sanitizerServiceMock.Setup(s => s.GetSanitizableMixersAsync(It.IsAny<Action<int, int>>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(new List<ActorMixerInfo>());
+            _dialogServiceMock.Setup(d => d.ShowNotification(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+            // Act
+            await ((IAsyncRelayCommand)_viewModel.ScanCommand).ExecuteAsync(null);
+
+            // Assert: an "All Clean!" congratulations notification should be shown
+            _dialogServiceMock.Verify(d => d.ShowNotification(
+                "All Clean!",
+                It.Is<string>(m => m.Contains("Congratulations"))), Times.Once);
+            Assert.True(_viewModel.IsScanned);
+            Assert.Empty(_viewModel.ActorMixers);
         }
 
         [Fact]

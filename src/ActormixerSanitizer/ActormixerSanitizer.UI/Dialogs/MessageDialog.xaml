@@ -41,7 +41,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock x:Name="TitleTextBlock" Grid.Row="0" Text="Actor-mixer Sanitizer" FontSize="22" FontWeight="SemiBold" Margin="25,22,0,12" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBlock x:Name="TitleTextBlock" Grid.Row="0" Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" FontSize="22" FontWeight="SemiBold" Margin="25,22,0,12" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
             <TextBlock x:Name="MessageTextBlock" Grid.Row="1" Margin="25,0,25,24" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Left"/>
         </Grid>
         <Grid Grid.Row="1" Margin="20,24,20,24">

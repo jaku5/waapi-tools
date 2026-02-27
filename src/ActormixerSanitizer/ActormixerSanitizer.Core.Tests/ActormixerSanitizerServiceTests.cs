@@ -233,9 +233,9 @@ new JProperty("id", ancestorId),
     }
 
     [Fact]
-    public async Task GetSanitizableMixersAsync_WhenNoActorsFound_ReturnsEmptyList()
+    public async Task GetSanitizableMixersAsync_WhenNoActorsFound_ReturnsNull()
     {
-      // Arrange
+      // Arrange: when no actor-mixers/property containers exist at all, service returns null (edge case 1)
       SetupTest();
       SetupDefaultMocks();
 
@@ -251,8 +251,8 @@ new JProperty("id", ancestorId),
       // Act
       var result = await _service!.GetSanitizableMixersAsync();
 
-      // Assert
-      Assert.Empty(result);
+      // Assert: null signals "no objects of this type exist in the project at all"
+      Assert.Null(result);
     }
 
     [Fact]

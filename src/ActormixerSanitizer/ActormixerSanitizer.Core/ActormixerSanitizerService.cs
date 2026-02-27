@@ -203,7 +203,12 @@ namespace JPAudio.WaapiTools.Tool.ActormixerSanitizer.Core
                 var actors = await GetActorMixersAsync(_client, actorQuery.Item1, actorQuery.Item2);
 
                 if (actors == null || !actors.Any())
-                    return new List<ActorMixerInfo>();
+                {
+                    _isSaved = false;
+                    _isConverted = false;
+                    _isScanned = true;
+                    return null; // Signals: no objects of this type exist in the project at all
+                }
 
                 cancellationToken.ThrowIfCancellationRequested();
 

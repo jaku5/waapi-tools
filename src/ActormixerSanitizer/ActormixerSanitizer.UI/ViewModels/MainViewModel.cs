@@ -401,6 +401,8 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
         }
 
+        private enum ScanResultKind { HasCandidates, NoCandidates, NoObjectsOfType }
+
         private async Task ScanAsync()
         {
             if (await _service.CheckProjectStateAsync())
@@ -410,6 +412,7 @@ namespace ActormixerSanitizer.UI.ViewModels
             }
 
             IsDialogOpen = true;
+            var scanResult = ScanResultKind.HasCandidates;
             try
             {
                 await _dialogService.RunTaskWithProgress("Scanning Project", async (progress, ct) =>
@@ -424,8 +427,24 @@ namespace ActormixerSanitizer.UI.ViewModels
                     await _dispatcherService.InvokeAsync(() =>
                     {
                         ActorMixers.Clear();
+                        IsScanned = true;
+                    });
 
-                        if (actors != null)
+                    if (actors == null)
+                    {
+                        // Edge case 1: No objects of this type exist anywhere in the project
+                        scanResult = ScanResultKind.NoObjectsOfType;
+                        AddLog($"No {ActorMixerNamePlural} found in the project.");
+                    }
+                    else if (!actors.Any())
+                    {
+                        // Edge case 2: Objects exist but none are candidates for conversion
+                        scanResult = ScanResultKind.NoCandidates;
+                        AddLog($"No {ActorMixerNamePlural} require conversion.");
+                    }
+                    else
+                    {
+                        await _dispatcherService.InvokeAsync(() =>
                         {
                             foreach (var actor in actors)
                             {
@@ -436,14 +455,22 @@ namespace ActormixerSanitizer.UI.ViewModels
                                 ActorMixers.Add(actor);
                             }
                             AddLog($"Found {actors.Count} {(actors.Count == 1 ? ActorMixerName : ActorMixerNamePlural)} that can be converted");
-                        }
-                        else
-                        {
-                            AddLog("Scan returned no mixers.");
-                        }
-                        IsScanned = true;
-                    });
+                        });
+                    }
                 });
+
+                if (scanResult == ScanResultKind.NoObjectsOfType)
+                {
+                    await _dialogService.ShowNotification(
+                        "Scan Complete",
+                        $"No suitable {ActorMixerNamePlural} were found in this project.");
+                }
+                else if (scanResult == ScanResultKind.NoCandidates)
+                {
+                    await _dialogService.ShowNotification(
+                        "All Clean!",
+                        $"Congratulations! No {ActorMixerNamePlural.ToLower()} candidates for conversion were found in this project.");
+                }
             }
             catch (OperationCanceledException)
             {
