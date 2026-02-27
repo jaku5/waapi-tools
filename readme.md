@@ -5,6 +5,7 @@ Waapi Tools is a collection of utilities designed to streamline tasks in Audioki
 Currently, the project includes the following tool:
 
 - **[PropertyContainerAuditor](https://github.com/jaku5/waapi-tools#property-container-auditor)**: A utility that converts Actor-Mixers / Property Containers into Virtual Folders if they are not utilized for mixing tasks.
+![PropertyContainerAuditor](images/PropertyContainerAuditor.png)
 - More tools coming soon.
 
 ## Prerequisites

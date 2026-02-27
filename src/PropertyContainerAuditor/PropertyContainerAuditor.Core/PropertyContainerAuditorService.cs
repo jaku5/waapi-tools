@@ -12,7 +12,7 @@ namespace JPAudio.WaapiTools.Tool.PropertyContainerAuditor.Core
         private const string WaqlKey = "waql";
         private const string ReturnKey = "return";
         private const string ObjectGetUri = ak.wwise.core.@object.get;
-        private int _wwiseYear = 0;
+        private int _wwiseYear = 2025;
         private string ActorMixerType => _wwiseYear >= 2025 ? "PropertyContainer" : "actormixer";
         private int ActorMixerObjectId => _wwiseYear >= 2025 ? 100 : 10;
         public string ActorMixerName => _wwiseYear >= 2025 ? "Property Container" : "Actor-Mixer";

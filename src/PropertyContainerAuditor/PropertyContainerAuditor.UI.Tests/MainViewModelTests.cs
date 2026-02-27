@@ -497,7 +497,7 @@ namespace PropertyContainerAuditor.UI.Tests
             _viewModel.IsNotConnected = false;
 
             // Assert
-            Assert.StartsWith("ActorMixer Auditor", _viewModel.WindowTitle);
+            Assert.StartsWith("Actor-Mixer Auditor", _viewModel.WindowTitle);
         }
 
         [Fact]

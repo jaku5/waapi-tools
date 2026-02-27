@@ -171,8 +171,8 @@ namespace PropertyContainerAuditor.UI.ViewModels
 
         public string ProjectName => _service.ProjectName;
         public string WwiseVersion => _service.WwiseVersion;
-        public string ActorMixerName => _service.ActorMixerName ?? "Actor-Mixer";
-        public string ActorMixerNamePlural => _service.ActorMixerNamePlural ?? "Actor-Mixers";
+        public string ActorMixerName => _service.ActorMixerName ?? "Property Container";
+        public string ActorMixerNamePlural => _service.ActorMixerNamePlural ?? "Property Containers";
 
         public bool CanConnect => IsNotConnected && !IsConnecting;
         public bool ShowConnectingProgress => IsConnecting;
@@ -182,7 +182,7 @@ namespace PropertyContainerAuditor.UI.ViewModels
         {
             get
             {
-                string baseTitle = $"{ActorMixerName.Replace("-", "")} Auditor";
+                string baseTitle = $"{ActorMixerName} Auditor";
                 if (IsConnecting) return $"{baseTitle} - [Connecting...]";
                 if (IsNotConnected) return $"{baseTitle} - [Disconnected]";
                 
