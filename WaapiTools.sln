@@ -7,13 +7,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientCore", "src\ClientCor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientJson", "src\ClientJson\ClientJson.csproj", "{3835D2FF-0F43-47AF-95FE-1A547FC61892}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer.Core", "src\ActormixerSanitizer\ActormixerSanitizer.Core\ActormixerSanitizer.Core.csproj", "{24B7B6C6-C47E-4DCD-E56C-02C367E1DE66}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertyContainerAuditor.Core", "src\PropertyContainerAuditor\PropertyContainerAuditor.Core\PropertyContainerAuditor.Core.csproj", "{24B7B6C6-C47E-4DCD-E56C-02C367E1DE66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer.UI", "src\ActormixerSanitizer\ActormixerSanitizer.UI\ActormixerSanitizer.UI.csproj", "{EF55128D-D8F8-D57A-23D7-0184A6D6C6DC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertyContainerAuditor.UI", "src\PropertyContainerAuditor\PropertyContainerAuditor.UI\PropertyContainerAuditor.UI.csproj", "{EF55128D-D8F8-D57A-23D7-0184A6D6C6DC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer.Core.Tests", "src\ActormixerSanitizer\ActormixerSanitizer.Core.Tests\ActormixerSanitizer.Core.Tests.csproj", "{FED06BAE-CB16-3D67-7812-49C1DC48C631}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertyContainerAuditor.Core.Tests", "src\PropertyContainerAuditor\PropertyContainerAuditor.Core.Tests\PropertyContainerAuditor.Core.Tests.csproj", "{FED06BAE-CB16-3D67-7812-49C1DC48C631}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActormixerSanitizer.UI.Tests", "src\ActormixerSanitizer\ActormixerSanitizer.UI.Tests\ActormixerSanitizer.UI.Tests.csproj", "{B6C0C84B-D242-60EC-BE9F-FD83FA8AA47A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertyContainerAuditor.UI.Tests", "src\PropertyContainerAuditor\PropertyContainerAuditor.UI.Tests\PropertyContainerAuditor.UI.Tests.csproj", "{B6C0C84B-D242-60EC-BE9F-FD83FA8AA47A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

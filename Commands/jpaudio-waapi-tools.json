@@ -1,16 +1,16 @@
 {
-    "commands":[
+    "commands": [
         {
-            "id":"jpaudio.actormixer-sanitizer",
-            "displayName":"Run Actormixer Sanitizer",
-            "defaultShortcut":"",
-            "program":"${CurrentCommandDirectory}\\..\\ActormixerSanitizer.exe",
-            "startMode":"SingleSelectionSingleProcess",
-            "args":"",
-            "cwd":"",         
-            "mainMenu":{
-                    "basePath":"Extra"
-                }
-        }      
+            "id": "jpaudio.property-container-auditor",
+            "displayName": "Run Property Container Auditor",
+            "defaultShortcut": "",
+            "program": "${CurrentCommandDirectory}\\..\\PropertyContainerAuditor.exe",
+            "startMode": "SingleSelectionSingleProcess",
+            "args": "",
+            "cwd": "",
+            "mainMenu": {
+                "basePath": "Extra"
+            }
+        }
     ]
 }
