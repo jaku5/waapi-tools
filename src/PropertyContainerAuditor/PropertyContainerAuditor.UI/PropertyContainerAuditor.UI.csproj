@@ -12,6 +12,8 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<PublishReadyToRun>false</PublishReadyToRun>
+		<ApplicationIcon>..\..\Resources\jplogo.ico</ApplicationIcon>
+		<Win32Icon>..\..\Resources\jplogo.ico</Win32Icon>
 	</PropertyGroup>
 
 	<ItemGroup>
