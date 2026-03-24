@@ -10,7 +10,9 @@ Currently, the project includes the following tool:
 
 ## Prerequisites
 
-- **Wwise 2022.1.x** or any newer version.
+- **Wwise 2023.1.x** or any newer version.
+- **Supported OS:** Windows 10[^1], Windows 11.
+[^1]: Note for Windows 10 users: Windows 10 does not include the Segoe Fluent Icons font by default. To ensure proper icon rendering, install the Segoe Fluent Icons font as described in the [Microsoft documentation](https://learn.microsoft.com/en-us/windows/apps/design/iconography/segoe-fluent-icons-font#how-do-i-get-this-font)
 
 ## Installation
 
