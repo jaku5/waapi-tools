@@ -453,15 +453,36 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         }
 
         /// <summary>
-        /// Returns a segment's length in milliseconds. The primary source is the trimmed
-        /// duration of the segment's longest audio source (<c>maxDurationSource</c>), which is
-        /// the reliable signal even when the segment only has its default entry/exit cues
-        /// (whose <c>@TimeMs</c> often reads back as 0). Falls back to the largest cue time.
-        /// Returns 0 if nothing can be determined.
+        /// Returns a segment's length in milliseconds. The primary source is the segment's own
+        /// <c>@EndPosition</c> property (the Exit cue position) — it is reliable regardless of how
+        /// many Music Tracks the segment holds, unlike <c>maxDurationSource</c>, which can come back
+        /// empty for multi-track segments. Falls back to maxDurationSource, then the largest cue
+        /// time. Returns 0 if nothing can be determined.
         /// </summary>
         private async Task<double> GetSegmentLengthMsAsync(string segmentId)
         {
-            // Primary: trimmed duration (seconds) of the longest audio source under the segment.
+            // Primary: the segment's End Position (ms), which marks the Exit cue / segment end.
+            try
+            {
+                var endResult = await QueryAsync(
+                    $"$ \"{segmentId}\"",
+                    new[] { "id", "name", "@EndPosition" });
+
+                var endMs = (endResult?[ReturnKey] as JArray)?.FirstOrDefault()
+                    ?["@EndPosition"]?.Value<double>();
+
+                if (endMs is > 0)
+                {
+                    _logger.LogInformation("Segment {Segment}: @EndPosition {Ms} ms.", segmentId, endMs);
+                    return endMs.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "@EndPosition query failed for segment {Segment}.", segmentId);
+            }
+
+            // Fallback: trimmed duration (seconds) of the longest audio source under the segment.
             try
             {
                 var durResult = await QueryAsync(

@@ -16,6 +16,9 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         string? ProjectName { get; }
         string? WwiseVersion { get; }
 
+        /// <summary>How far before each segment's end to place the audition cue, in milliseconds.</summary>
+        int AuditionCueOffsetFromEndMs { get; set; }
+
         /// <summary>The currently set-up audition, or null if none is active.</summary>
         AuditionSession? Session { get; }
 

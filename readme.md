@@ -62,14 +62,14 @@ It is the live, in-editor, single-transition counterpart to offline approaches l
 
 #### How it works
 1. In Wwise, **select** a Music Switch Container, Music Playlist Container, or Music Segment in the Project Explorer.
-2. Run **Extra → Audition Music Transition**.
-3. The tool, **non-destructively**:
+2. Run **Extra → Audition Music Transition**. The tool connects and shows the selected target.
+3. Set the **cue offset from end** (in seconds, default 1 s) and click **Set Up & Audition**. The tool, **non-destructively**:
    - Creates a throwaway Work Unit in the Interactive Music Hierarchy.
    - **Copies** the selected structure into it (the production structure is never touched).
-   - Places one custom cue 1 second before each Music Segment's end, so you can jump to the run‑up into the transition instead of playing the whole segment.
-   - Builds a Music Switch Container around the copy and adds a transition rule (Source **None** → **target**, Sync to **Random Custom Cue**, matching the audition cue) as the highest‑priority rule in the container.
+   - Places one custom cue the chosen offset before each Music Segment's end, so you can jump to the run‑up into the transition instead of playing the whole segment.
+   - Builds a Music Switch Container around the copy, assigns the copy as its generic path, and adds a transition rule (Source **None** → **target**, Sync to **Random Custom Cue**, matching the audition cue) as the highest‑priority rule in the container.
    - Creates a transport, ready to audition.
-4. Press **Play** in the Wwise Transport Control to hear the transition.
+4. Press **Play** in the Wwise Transport Control to hear the transition. Adjust the offset and click **Set Up & Audition** again to rebuild.
 5. Click **Finish & Clean Up** (or just close the window) — the entire temp Work Unit is deleted. The project is never saved.
 
 > [!NOTE]
