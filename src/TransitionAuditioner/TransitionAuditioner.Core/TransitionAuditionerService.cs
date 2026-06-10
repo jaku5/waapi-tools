@@ -1,0 +1,490 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using JPAudio.WaapiTools.ClientJson;
+using JPAudio.WaapiTools.Tool.TransitionAuditioner.Core.Models;
+
+namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
+{
+    /// <summary>
+    /// Automates the community "jump to custom cue" technique to audition a single
+    /// interactive-music transition in-editor, without playing through the material
+    /// that precedes it.
+    ///
+    /// The operation is non-destructive: the production structure is copied into a
+    /// throwaway Work Unit and all scaffolding is built around the copy. Teardown
+    /// deletes that Work Unit, so the whole thing collapses to a single clean undo,
+    /// and the project is never saved.
+    /// </summary>
+    public class TransitionAuditionerService : ITransitionAuditionerService
+    {
+        private readonly IJsonClient _client;
+        private readonly ILogger<TransitionAuditionerService> _logger;
+
+        private const string ReturnKey = "return";
+        private const string WaqlKey = "waql";
+        private const string InteractiveMusicHierarchy = "\\Interactive Music Hierarchy";
+        private const string TempWorkUnitName = "TransitionAuditioner_Temp";
+        private const string HarnessContainerName = "AuditionHarness";
+
+        // @CueType value for a Custom cue (Entry = 0, Exit = 1, Custom = 2).
+        private const int CustomCueType = 2;
+
+        // How far before the segment's end to place the audition cue, so you can jump
+        // straight to the run-up into the transition instead of playing the whole segment.
+        // Hardcoded for the MVP; intended to become a UI setting later.
+        public int AuditionCueOffsetFromEndMs { get; set; } = 1000;
+
+        // Types that make sense as an audition target — they own (or contain) the
+        // transitions we want to reach directly.
+        private static readonly HashSet<string> AuditionableTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "MusicSwitchContainer",
+            "MusicPlaylistContainer",
+            "MusicSegment",
+        };
+
+        public event EventHandler<string>? StatusUpdated;
+        public event EventHandler<string>? NotificationRequested;
+        public event EventHandler? Disconnected;
+
+        public bool IsConnected { get; private set; }
+        public bool IsSetUp => Session != null;
+        public string? ProjectName { get; private set; }
+        public string? WwiseVersion { get; private set; }
+        public AuditionSession? Session { get; private set; }
+
+        public TransitionAuditionerService(IJsonClient client, ILogger<TransitionAuditionerService> logger)
+        {
+            _client = client;
+            _client.Disconnected += () =>
+            {
+                IsConnected = false;
+                Disconnected?.Invoke(this, EventArgs.Empty);
+            };
+            _logger = logger;
+        }
+
+        public async Task ConnectAsync()
+        {
+            await _client.Connect();
+            IsConnected = true;
+
+            try
+            {
+                var projectInfo = await _client.Call(ak.wwise.core.getProjectInfo);
+                ProjectName = projectInfo?["name"]?.ToString();
+
+                var info = await _client.Call(ak.wwise.core.getInfo);
+                WwiseVersion = info?["version"]?["displayName"]?.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to fetch project info: {Message}", ex.Message);
+            }
+        }
+
+        public void Disconnect()
+        {
+            IsConnected = false;
+            _client.Disconnect();
+        }
+
+        public async Task<MusicObjectInfo?> GetSelectedTargetAsync()
+        {
+            var selection = await _client.Call(
+                ak.wwise.ui.getSelectedObjects,
+                null,
+                new JObject(new JProperty(ReturnKey, new JArray("id", "name", "type", "path"))));
+
+            if (selection?["objects"] is not JArray objects || objects.Count == 0)
+            {
+                Notify("Nothing is selected. Select an interactive-music container in the Project Explorer, then run the tool.");
+                return null;
+            }
+
+            var match = objects.FirstOrDefault(o =>
+                AuditionableTypes.Contains(o["type"]?.ToString() ?? string.Empty));
+
+            if (match == null)
+            {
+                Notify("The selection is not an interactive-music object. Select a Music Switch Container, Music Playlist Container, or Music Segment.");
+                return null;
+            }
+
+            return ToMusicObject(match);
+        }
+
+        public async Task<AuditionSession> SetUpAuditionAsync(MusicObjectInfo target, CancellationToken cancellationToken = default)
+        {
+            if (Session != null)
+            {
+                // Never stack scaffolding — clean up any previous audition first.
+                await TeardownAsync();
+            }
+
+            var session = new AuditionSession { Target = target };
+
+            // Group the whole build so that, combined with the temp Work Unit, the user
+            // can also collapse it with a single Ctrl+Z even if teardown is skipped.
+            await _client.Call(ak.wwise.core.undo.beginGroup);
+
+            try
+            {
+                Status($"Creating temporary Work Unit for \"{target.Name}\"...");
+                var workUnit = await _client.Call(ak.wwise.core.@object.create, new JObject(
+                    new JProperty("parent", InteractiveMusicHierarchy),
+                    new JProperty("type", "WorkUnit"),
+                    new JProperty("name", TempWorkUnitName),
+                    new JProperty("onNameConflict", "rename")));
+                session.TempWorkUnitId = RequireId(workUnit, "temp Work Unit");
+                cancellationToken.ThrowIfCancellationRequested();
+
+                Status("Copying the target structure into the temporary Work Unit...");
+                var copy = await _client.Call(ak.wwise.core.@object.copy, new JObject(
+                    new JProperty("object", target.Id),
+                    new JProperty("parent", session.TempWorkUnitId),
+                    new JProperty("onNameConflict", "rename")));
+                session.CopyId = RequireId(copy, "structure copy");
+                cancellationToken.ThrowIfCancellationRequested();
+
+                Status("Building the Music Switch Container harness...");
+                var switchContainer = await _client.Call(ak.wwise.core.@object.create, new JObject(
+                    new JProperty("parent", session.TempWorkUnitId),
+                    new JProperty("type", "MusicSwitchContainer"),
+                    new JProperty("name", HarnessContainerName),
+                    new JProperty("onNameConflict", "rename")));
+                session.SwitchContainerId = RequireId(switchContainer, "harness container");
+
+                Status("Reparenting the copy under the harness...");
+                await _client.Call(ak.wwise.core.@object.move, new JObject(
+                    new JProperty("object", session.CopyId),
+                    new JProperty("parent", session.SwitchContainerId),
+                    new JProperty("onNameConflict", "rename")));
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await CreateAuditionCuesAsync(session, cancellationToken);
+                session.CustomCues = await GetCustomCuesAsync(session.CopyId);
+
+                await TryConfigureTransitionRuleAsync(session);
+
+                Status("Creating a transport so you can audition...");
+                var transport = await _client.Call(ak.wwise.core.transport.create, new JObject(
+                    new JProperty("object", session.SwitchContainerId)));
+                if (transport?["transport"] != null)
+                {
+                    session.TransportId = transport["transport"]!.Value<int>();
+                }
+
+                Session = session;
+                Status("Ready. Press Play in the Wwise Transport Control to audition the transition.");
+                return session;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Audition setup failed; rolling back.");
+                Status("Setup failed — cleaning up.");
+                // Roll back whatever was created so we never leave the project littered.
+                await SafeTeardownAsync(session);
+                throw;
+            }
+            finally
+            {
+                // End (but never cancel) the group: the create calls already happened, and
+                // teardown's delete is what we rely on for cleanup, not group cancellation.
+                await SafeCall(() => _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                    new JProperty("displayName", "Set up transition audition"))));
+            }
+        }
+
+        public async Task TeardownAsync()
+        {
+            if (Session == null)
+                return;
+
+            var session = Session;
+            Session = null;
+            await SafeTeardownAsync(session);
+            Status("Cleaned up. The project was not modified or saved.");
+        }
+
+        public async Task ShowInProjectExplorerAsync()
+        {
+            if (Session?.SwitchContainerId is not { Length: > 0 } id)
+                return;
+
+            await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
+                new JProperty("command", "FindInProjectExplorerSelectionChannel1"),
+                new JProperty("objects", new JArray(id)))));
+        }
+
+        /// <summary>
+        /// Configures the NONE -&gt; target transition rule that lands playback directly on
+        /// the transition boundary (Jump to playlist item + custom-cue matching).
+        ///
+        /// The exact property/reference names for transition rules are Wwise-version
+        /// specific and not all are exposed identically through WAAPI, so this is treated
+        /// as best-effort: failure is logged and surfaced, but the harness is still left
+        /// playable so the user can finish the rule by hand if needed.
+        /// </summary>
+        private async Task TryConfigureTransitionRuleAsync(AuditionSession session)
+        {
+            Status("Configuring the transition rule (NONE -> target)...");
+            try
+            {
+                // Sync the destination to a Random Custom Cue and, when the target exposes a
+                // custom cue, match on it so the transition resolves to that boundary.
+                var matchCue = session.CustomCues.FirstOrDefault();
+
+                await _client.Call(ak.wwise.core.@object.setProperty, new JObject(
+                    new JProperty("object", session.SwitchContainerId),
+                    new JProperty("property", "DestinationSyncTo"),
+                    // "Random Custom Cue" — kept as the documented enum value for the
+                    // target version; adjust here if the floor version differs.
+                    new JProperty("value", 5)));
+
+                if (matchCue != null)
+                {
+                    await _client.Call(ak.wwise.core.@object.setProperty, new JObject(
+                        new JProperty("object", session.SwitchContainerId),
+                        new JProperty("property", "DestinationCustomCueFilterMatchSourceCueName"),
+                        new JProperty("value", matchCue.Name)));
+                }
+
+                session.TransitionRuleConfigured = true;
+                _logger.LogInformation("Transition rule configured (match cue: {Cue}).", matchCue?.Name ?? "<none>");
+            }
+            catch (Exception ex)
+            {
+                session.TransitionRuleConfigured = false;
+                _logger.LogWarning(ex, "Could not set the transition rule automatically.");
+                Notify("The transition rule could not be set automatically for this Wwise version. " +
+                       "The harness is still playable — set 'Jump to playlist item' / custom-cue match by hand, then press Play.");
+            }
+        }
+
+        /// <summary>
+        /// Lays down custom cues at <see cref="AuditionCueIntervalMs"/> intervals across every
+        /// Music Segment in the copied structure. The segment's length is taken from the latest
+        /// existing cue (its Exit cue), so cues are only placed within the segment's bounds.
+        /// All edits happen on the copy inside the temp Work Unit, so production is untouched.
+        /// </summary>
+        private async Task CreateAuditionCuesAsync(AuditionSession session, CancellationToken cancellationToken)
+        {
+            Status($"Placing one audition cue {AuditionCueOffsetFromEndMs} ms before each segment's end...");
+
+            var segments = await GetSegmentsAsync(session);
+            if (segments.Count == 0)
+            {
+                _logger.LogInformation("No music segments found under the copy; skipping cue creation.");
+                return;
+            }
+
+            Status($"Found {segments.Count} segment(s) under the copy.");
+
+            int created = 0;
+            foreach (var segment in segments)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                double lengthMs = await GetSegmentLengthMsAsync(segment.Id);
+                Status($"  • \"{segment.Name}\" measured length: {lengthMs} ms");
+                if (lengthMs <= AuditionCueOffsetFromEndMs)
+                {
+                    _logger.LogWarning("Skipping segment {Segment}: length {Length} ms <= offset {Offset} ms.",
+                        segment.Name, lengthMs, AuditionCueOffsetFromEndMs);
+                    continue;
+                }
+
+                int cueTime = (int)Math.Round(lengthMs - AuditionCueOffsetFromEndMs);
+                try
+                {
+                    await _client.Call(ak.wwise.core.@object.create, new JObject(
+                        new JProperty("parent", segment.Id),
+                        new JProperty("type", "MusicCue"),
+                        new JProperty("list", "Cues"),
+                        new JProperty("name", $"Audition_End-{AuditionCueOffsetFromEndMs}ms"),
+                        new JProperty("@TimeMs", cueTime),
+                        new JProperty("@CueType", CustomCueType),
+                        new JProperty("onNameConflict", "rename")));
+                    created++;
+                }
+                catch (Exception ex)
+                {
+                    Notify($"Could not create cue at {cueTime} ms on \"{segment.Name}\": {ex.Message}");
+                    _logger.LogWarning(ex, "MusicCue create failed at {Time} ms on {Segment}.", cueTime, segment.Name);
+                }
+            }
+
+            Status($"Added {created} audition cue(s) across {segments.Count} segment(s).");
+        }
+
+        /// <summary>Returns the Music Segments in the copied structure (the copy itself if it is one).</summary>
+        private async Task<List<MusicObjectInfo>> GetSegmentsAsync(AuditionSession session)
+        {
+            if (string.Equals(session.Target.Type, "MusicSegment", StringComparison.OrdinalIgnoreCase))
+            {
+                return new List<MusicObjectInfo> { new() { Id = session.CopyId, Name = session.Target.Name, Type = "MusicSegment" } };
+            }
+
+            var result = await QueryAsync(
+                $"$ \"{session.CopyId}\" select descendants where type = \"MusicSegment\"",
+                new[] { "id", "name", "type", "path" });
+
+            return result?[ReturnKey] is JArray segments
+                ? segments.Select(ToMusicObject).ToList()
+                : new List<MusicObjectInfo>();
+        }
+
+        /// <summary>
+        /// Returns a segment's length in milliseconds. The primary source is the trimmed
+        /// duration of the segment's longest audio source (<c>maxDurationSource</c>), which is
+        /// the reliable signal even when the segment only has its default entry/exit cues
+        /// (whose <c>@TimeMs</c> often reads back as 0). Falls back to the largest cue time.
+        /// Returns 0 if nothing can be determined.
+        /// </summary>
+        private async Task<double> GetSegmentLengthMsAsync(string segmentId)
+        {
+            // Primary: trimmed duration (seconds) of the longest audio source under the segment.
+            try
+            {
+                var durResult = await QueryAsync(
+                    $"$ \"{segmentId}\"",
+                    new[] { "id", "name", "maxDurationSource" });
+
+                var seconds = (durResult?[ReturnKey] as JArray)?.FirstOrDefault()
+                    ?["maxDurationSource"]?["trimmedDuration"]?.Value<double>();
+
+                if (seconds is > 0)
+                {
+                    double ms = seconds.Value * 1000.0;
+                    _logger.LogInformation("Segment {Segment}: maxDurationSource trimmedDuration {Seconds}s -> {Ms} ms.",
+                        segmentId, seconds, ms);
+                    return ms;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "maxDurationSource query failed for segment {Segment}.", segmentId);
+            }
+
+            // Fallback: the largest cue @TimeMs (e.g. the Exit cue), when it is populated.
+            var queries = new[]
+            {
+                ("descendants", $"$ \"{segmentId}\" select descendants where type = \"MusicCue\""),
+                ("children",    $"$ \"{segmentId}\" select children where type = \"MusicCue\""),
+                ("ancestor",    $"$ from type MusicCue where ancestors.any(id = \"{segmentId}\")"),
+            };
+
+            foreach (var (label, waql) in queries)
+            {
+                try
+                {
+                    var result = await QueryAsync(waql, new[] { "id", "name", "@TimeMs", "@CueType" });
+
+                    if (result?[ReturnKey] is JArray cues && cues.Count > 0)
+                    {
+                        _logger.LogInformation("Segment {Segment}: {Count} cue(s) via {Relation}: {Cues}",
+                            segmentId, cues.Count, label, cues.ToString());
+                        return cues.Max(c => c["@TimeMs"]?.Value<double>() ?? 0);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Cue query ({Relation}) failed for segment {Segment}.", label, segmentId);
+                }
+            }
+
+            _logger.LogWarning("No cues found under segment {Segment} (copy may not preserve cues).", segmentId);
+            return 0;
+        }
+
+        private async Task<List<MusicObjectInfo>> GetCustomCuesAsync(string rootId)
+        {
+            try
+            {
+                var result = await QueryAsync(
+                    $"$ \"{rootId}\" select descendants where type = \"MusicCue\" and @CueType = {CustomCueType}",
+                    new[] { "id", "name", "type", "path" });
+
+                if (result?[ReturnKey] is JArray cues)
+                {
+                    return cues.Select(ToMusicObject).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enumerate custom cues.");
+            }
+
+            return new List<MusicObjectInfo>();
+        }
+
+        /// <summary>Best-effort rollback: destroy the transport, then delete the temp Work Unit.</summary>
+        private async Task SafeTeardownAsync(AuditionSession session)
+        {
+            if (session.TransportId is int transportId)
+            {
+                await SafeCall(() => _client.Call(ak.wwise.core.transport.destroy, new JObject(
+                    new JProperty("transport", transportId))));
+            }
+
+            if (!string.IsNullOrEmpty(session.TempWorkUnitId))
+            {
+                await SafeCall(() => _client.Call(ak.wwise.core.@object.delete, new JObject(
+                    new JProperty("object", session.TempWorkUnitId))));
+            }
+        }
+
+        private async Task SafeCall(Func<Task> action)
+        {
+            try
+            {
+                await action();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cleanup step failed (continuing).");
+            }
+        }
+
+        private Task<JObject> QueryAsync(string waql, string[] returnFields)
+        {
+            var args = new JObject(new JProperty(WaqlKey, waql));
+            var options = new JObject(new JProperty(ReturnKey, new JArray(returnFields)));
+            return _client.Call(ak.wwise.core.@object.get, args, options);
+        }
+
+        private static string RequireId(JObject? result, string what)
+        {
+            var id = result?["id"]?.ToString();
+            if (string.IsNullOrEmpty(id))
+                throw new InvalidOperationException($"WAAPI did not return an id for the {what}.");
+            return id;
+        }
+
+        private static MusicObjectInfo ToMusicObject(JToken token) => new()
+        {
+            Id = token["id"]?.ToString() ?? string.Empty,
+            Name = token["name"]?.ToString() ?? string.Empty,
+            Type = token["type"]?.ToString() ?? string.Empty,
+            Path = token["path"]?.ToString() ?? string.Empty,
+        };
+
+        private void Status(string message)
+        {
+            _logger.LogInformation("{Message}", message);
+            StatusUpdated?.Invoke(this, message);
+        }
+
+        private void Notify(string message)
+        {
+            _logger.LogWarning("{Message}", message);
+            NotificationRequested?.Invoke(this, message);
+        }
+    }
+}

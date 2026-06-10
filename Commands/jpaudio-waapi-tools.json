@@ -11,6 +11,18 @@
             "mainMenu": {
                 "basePath": "Extra"
             }
+        },
+        {
+            "id": "jpaudio.transition-auditioner",
+            "displayName": "Audition Music Transition",
+            "defaultShortcut": "",
+            "program": "${CurrentCommandDirectory}\\..\\TransitionAuditioner.exe",
+            "startMode": "SingleSelectionSingleProcess",
+            "args": "",
+            "cwd": "",
+            "mainMenu": {
+                "basePath": "Extra"
+            }
         }
     ]
 }

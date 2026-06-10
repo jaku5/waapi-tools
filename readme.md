@@ -6,6 +6,7 @@ Currently, the project includes the following tool:
 
 - **[PropertyContainerAuditor](https://github.com/jaku5/waapi-tools#property-container-auditor)**: A utility that converts Actor-Mixers / Property Containers into Virtual Folders if they are not utilized for mixing tasks.
 ![PropertyContainerAuditor](images/PropertyContainerAuditor.png)
+- **[TransitionAuditioner](https://github.com/jaku5/waapi-tools#transition-auditioner)**: Audition a single interactive-music transition in-editor, without playing through the material that precedes it.
 - More tools coming soon.
 
 ## Prerequisites
@@ -52,6 +53,27 @@ The tool will:
 
 > [!NOTE]
 > Please note that this tool is considered experimental; be careful when using it in production and preferably have source control set up to inspect the diffs or restore backups. Especially since it is meant to be used at the end of production, after the mixing stage, when you know you won't need these Actor-Mixers / Property Container for mixing tasks. That said, you should be able to undo all the changes made by the tool with <kbd>Ctrl</kbd> + <kbd>Z</kbd>.
+
+### Transition Auditioner
+#### Background
+In Wwise interactive music, transitions fire only at their defined points (bars, cues, segment ends). To hear one specific transition you often have to start playback well before it and listen through the intervening material — then redo the wait after every tweak. This tool automates a community technique (wrapping the structure in a parent Music Switch Container with a *Jump to playlist item* + custom-cue transition rule) so that checking one transition becomes a one-step action.
+
+It is the live, in-editor, single-transition counterpart to offline approaches like [Music Render](https://www.audiokinetic.com/en/blog/) — complementary, not competing.
+
+#### How it works
+1. In Wwise, **select** a Music Switch Container, Music Playlist Container, or Music Segment in the Project Explorer.
+2. Run **Extra → Audition Music Transition**.
+3. The tool, **non-destructively**:
+   - Creates a throwaway Work Unit in the Interactive Music Hierarchy.
+   - **Copies** the selected structure into it (the production structure is never touched).
+   - Places one custom cue 1 second before each Music Segment's end, so you can jump to the run‑up into the transition instead of playing the whole segment.
+   - Builds a Music Switch Container around the copy and configures the transition rule (matching a custom cue).
+   - Creates a transport, ready to audition.
+4. Press **Play** in the Wwise Transport Control to hear the transition.
+5. Click **Finish & Clean Up** (or just close the window) — the entire temp Work Unit is deleted. The project is never saved.
+
+> [!NOTE]
+> This is an MVP (v1). It sets up the audition and you press Play; a fully automatic playback trigger and a transition-picker panel are planned for a later version. The exact transition-rule property names are Wwise-version specific — if the rule can't be set automatically on your version, the harness is still left playable so you can finish the rule by hand. Teardown runs even on error, so the tool never leaves scaffolding behind.
 
 ## License
 

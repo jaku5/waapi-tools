@@ -1,0 +1,49 @@
+<Window x:Class="TransitionAuditioner.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Transition Auditioner"
+        Width="560" Height="520"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="{Binding Header}" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SubHeader}" Opacity="0.7" Margin="0,2,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Margin="0,16,0,0" Padding="12,8"
+                CornerRadius="6" Background="#22808080">
+            <StackPanel>
+                <TextBlock Text="Target" Opacity="0.6" FontSize="12" />
+                <TextBlock Text="{Binding TargetName}" FontSize="15" FontWeight="Medium" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="2" Margin="0,16,0,6" Text="Activity" Opacity="0.6" FontSize="12" />
+
+        <Border Grid.Row="3" CornerRadius="6" BorderThickness="1" BorderBrush="#33808080">
+            <ListBox ItemsSource="{Binding Log}" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Padding="2" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Show in Project Explorer"
+                    Command="{Binding ShowInExplorerCommand}" Margin="0,0,8,0" Padding="14,6" />
+            <Button Content="Finish &amp; Clean Up"
+                    Command="{Binding FinishCommand}" Padding="14,6" />
+        </StackPanel>
+    </Grid>
+</Window>
