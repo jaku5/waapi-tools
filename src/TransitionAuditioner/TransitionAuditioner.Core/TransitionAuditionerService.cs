@@ -39,6 +39,9 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         // Hardcoded for the MVP; intended to become a UI setting later.
         public int AuditionCueOffsetFromEndMs { get; set; } = 1000;
 
+        // Shared name for the custom cues we create and for the transition rule that matches them.
+        private string AuditionCueName => $"Audition_End-{AuditionCueOffsetFromEndMs}ms";
+
         // Types that make sense as an audition target — they own (or contain) the
         // transitions we want to reach directly.
         private static readonly HashSet<string> AuditionableTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -233,45 +236,116 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// </summary>
         private async Task TryConfigureTransitionRuleAsync(AuditionSession session)
         {
-            Status("Configuring the transition rule (NONE -> target)...");
+            Status($"Configuring transition rule: None -> \"{session.Target.Name}\", Sync to Random Custom Cue (match \"{AuditionCueName}\")...");
             try
             {
-                // Sync the destination to a Random Custom Cue and, when the target exposes a
-                // custom cue, match on it so the transition resolves to that boundary.
-                var matchCue = session.CustomCues.FirstOrDefault();
-
-                await _client.Call(ak.wwise.core.@object.setProperty, new JObject(
-                    new JProperty("object", session.SwitchContainerId),
-                    new JProperty("property", "DestinationSyncTo"),
-                    // "Random Custom Cue" — kept as the documented enum value for the
-                    // target version; adjust here if the floor version differs.
-                    new JProperty("value", 5)));
-
-                if (matchCue != null)
+                // Transitions aren't normal children of the container: the container references a
+                // "Root" MusicTransition (TransitionRoot), and the actual rules are ChildrenList
+                // children of that Root. A MusicTransition can't be created via WAAPI, but a fresh
+                // container already ships with a default "(Any) to (Any)" rule — we just configure
+                // that one. The MusicTransition model is identical across Wwise 2021–2025.
+                var rootId = await FindTransitionRootAsync(session.SwitchContainerId);
+                if (rootId == null)
                 {
-                    await _client.Call(ak.wwise.core.@object.setProperty, new JObject(
-                        new JProperty("object", session.SwitchContainerId),
-                        new JProperty("property", "DestinationCustomCueFilterMatchSourceCueName"),
-                        new JProperty("value", matchCue.Name)));
+                    throw new InvalidOperationException(
+                        "Could not find the container's Root MusicTransition.");
                 }
 
+                // The default "(Any) to (Any)" rule is read-only, so add a new rule as the last
+                // (highest-priority) child of the Root and configure that.
+                var transitionId = await CreateTransitionRuleAsync(rootId);
+
+                // Source = None (Nothing); Destination = Object pointing at the copied structure.
+                await SetTransitionProperty(transitionId, "SourceContextType", 1);
+                await SetTransitionProperty(transitionId, "DestinationContextType", 2);
+                // Destination Sync To = Random Custom Cue.
+                await SetTransitionProperty(transitionId, "DestinationJumpPositionPreset", 3);
+                // Custom Cue Filter = Match specific name = our audition cue.
+                await SetTransitionProperty(transitionId, "JumpToCustomCueMatchMode", 1);
+                await SetTransitionProperty(transitionId, "JumpToCustomCueMatchName", AuditionCueName);
+
+                await _client.Call(ak.wwise.core.@object.setReference, new JObject(
+                    new JProperty("object", transitionId),
+                    new JProperty("reference", "DestinationContextObject"),
+                    new JProperty("value", session.CopyId)));
+
                 session.TransitionRuleConfigured = true;
-                _logger.LogInformation("Transition rule configured (match cue: {Cue}).", matchCue?.Name ?? "<none>");
+                Status("Transition rule configured.");
             }
             catch (Exception ex)
             {
                 session.TransitionRuleConfigured = false;
-                _logger.LogWarning(ex, "Could not set the transition rule automatically.");
-                Notify("The transition rule could not be set automatically for this Wwise version. " +
-                       "The harness is still playable — set 'Jump to playlist item' / custom-cue match by hand, then press Play.");
+                _logger.LogWarning(ex, "Could not configure the transition rule automatically.");
+                Notify($"Transition rule setup failed: {DescribeError(ex)}");
+                Notify("The harness is still playable — set the None -> target transition " +
+                       $"(Sync to Random Custom Cue, match \"{AuditionCueName}\") by hand, then press Play.");
             }
         }
 
         /// <summary>
-        /// Lays down custom cues at <see cref="AuditionCueIntervalMs"/> intervals across every
-        /// Music Segment in the copied structure. The segment's length is taken from the latest
-        /// existing cue (its Exit cue), so cues are only placed within the segment's bounds.
-        /// All edits happen on the copy inside the temp Work Unit, so production is untouched.
+        /// Surfaces the WAMP error detail payload that the ClientCore ErrorException carries in
+        /// its internal <c>Json</c> field (read via reflection) — for invalid_arguments this
+        /// usually names the exact offending argument.
+        /// </summary>
+        private static string DescribeError(Exception ex)
+        {
+            var json = ex.GetType()
+                .GetProperty("Json", System.Reflection.BindingFlags.Instance
+                    | System.Reflection.BindingFlags.NonPublic
+                    | System.Reflection.BindingFlags.Public)?
+                .GetValue(ex) as string;
+
+            return string.IsNullOrWhiteSpace(json) ? ex.Message : $"{ex.Message} | {json.Trim()}";
+        }
+
+        /// <summary>
+        /// Finds the "Root" MusicTransition owned by the given container. Transitions reference
+        /// their container through an <c>owner</c> field rather than the parent/child hierarchy.
+        /// </summary>
+        private async Task<string?> FindTransitionRootAsync(string containerId)
+        {
+            var result = await QueryAsync(
+                "$ from type MusicTransition where name = \"Root\"",
+                new[] { "id", "name", "owner" });
+
+            var root = (result?[ReturnKey] as JArray)?
+                .FirstOrDefault(t => t["owner"]?["id"]?.ToString() == containerId);
+
+            var rootId = root?["id"]?.ToString();
+            _logger.LogInformation("Transition Root for container {Container}: {Root}", containerId, rootId ?? "<none>");
+            return string.IsNullOrEmpty(rootId) ? null : rootId;
+        }
+
+        /// <summary>
+        /// Adds a new rule MusicTransition as a child of the Root. Per the work-unit structure,
+        /// rules live in the Root's default ChildrenList (no named list), appended last so the
+        /// rule has the highest priority. Surfaces the full WAMP error detail if create is rejected.
+        /// </summary>
+        private async Task<string> CreateTransitionRuleAsync(string rootId)
+        {
+            var result = await _client.Call(ak.wwise.core.@object.create, new JObject(
+                new JProperty("parent", rootId),
+                new JProperty("type", "MusicTransition"),
+                new JProperty("name", "Transition"),
+                new JProperty("onNameConflict", "rename")));
+
+            _logger.LogInformation("MusicTransition create result: {Result}", result?.ToString());
+            return RequireId(result, "music transition");
+        }
+
+        private async Task SetTransitionProperty(string transitionId, string property, object value)
+        {
+            await _client.Call(ak.wwise.core.@object.setProperty, new JObject(
+                new JProperty("object", transitionId),
+                new JProperty("property", property),
+                new JProperty("value", JToken.FromObject(value))));
+        }
+
+        /// <summary>
+        /// Places one custom cue <see cref="AuditionCueOffsetFromEndMs"/> ms before the end of
+        /// every Music Segment in the copied structure, so the transition can jump straight to the
+        /// run-up into the segment's end. All edits happen on the copy inside the temp Work Unit,
+        /// so production is untouched.
         /// </summary>
         private async Task CreateAuditionCuesAsync(AuditionSession session, CancellationToken cancellationToken)
         {
@@ -284,15 +358,13 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 return;
             }
 
-            Status($"Found {segments.Count} segment(s) under the copy.");
-
             int created = 0;
             foreach (var segment in segments)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 double lengthMs = await GetSegmentLengthMsAsync(segment.Id);
-                Status($"  • \"{segment.Name}\" measured length: {lengthMs} ms");
+                _logger.LogInformation("Segment \"{Segment}\" measured length: {Length} ms.", segment.Name, lengthMs);
                 if (lengthMs <= AuditionCueOffsetFromEndMs)
                 {
                     _logger.LogWarning("Skipping segment {Segment}: length {Length} ms <= offset {Offset} ms.",
@@ -307,7 +379,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                         new JProperty("parent", segment.Id),
                         new JProperty("type", "MusicCue"),
                         new JProperty("list", "Cues"),
-                        new JProperty("name", $"Audition_End-{AuditionCueOffsetFromEndMs}ms"),
+                        new JProperty("name", AuditionCueName),
                         new JProperty("@TimeMs", cueTime),
                         new JProperty("@CueType", CustomCueType),
                         new JProperty("onNameConflict", "rename")));

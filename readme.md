@@ -67,13 +67,13 @@ It is the live, in-editor, single-transition counterpart to offline approaches l
    - Creates a throwaway Work Unit in the Interactive Music Hierarchy.
    - **Copies** the selected structure into it (the production structure is never touched).
    - Places one custom cue 1 second before each Music Segment's end, so you can jump to the run‑up into the transition instead of playing the whole segment.
-   - Builds a Music Switch Container around the copy and configures the transition rule (matching a custom cue).
+   - Builds a Music Switch Container around the copy and adds a transition rule (Source **None** → **target**, Sync to **Random Custom Cue**, matching the audition cue) as the highest‑priority rule in the container.
    - Creates a transport, ready to audition.
 4. Press **Play** in the Wwise Transport Control to hear the transition.
 5. Click **Finish & Clean Up** (or just close the window) — the entire temp Work Unit is deleted. The project is never saved.
 
 > [!NOTE]
-> This is an MVP (v1). It sets up the audition and you press Play; a fully automatic playback trigger and a transition-picker panel are planned for a later version. The exact transition-rule property names are Wwise-version specific — if the rule can't be set automatically on your version, the harness is still left playable so you can finish the rule by hand. Teardown runs even on error, so the tool never leaves scaffolding behind.
+> This is an MVP (v1). It sets up the audition and you press Play; a fully automatic playback trigger and a transition-picker panel are planned for a later version. The transition rule is built automatically (the `MusicTransition` object model is identical across Wwise 2021–2025); if it can't be set for any reason, the harness is still left playable so you can finish the rule by hand. Teardown runs even on error, so the tool never leaves scaffolding behind.
 
 ## License
 
