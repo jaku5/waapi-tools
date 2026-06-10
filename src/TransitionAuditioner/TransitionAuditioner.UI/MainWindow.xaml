@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Transition Auditioner"
-        Width="560" Height="560"
+        Width="660" Height="560"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -31,6 +31,9 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -39,7 +42,17 @@
                        VerticalAlignment="Center" Margin="0,0,8,0" />
             <TextBox Grid.Column="1" Width="70" VerticalAlignment="Center"
                      Text="{Binding OffsetSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <Button Grid.Column="3" Content="Set Up &amp; Audition" Padding="14,6"
+
+            <TextBlock Grid.Column="3" Text="Length basis"
+                       VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox Grid.Column="4" Width="150" VerticalAlignment="Center"
+                      SelectedIndex="{Binding LengthSourceIndex, Mode=TwoWay}">
+                <ComboBoxItem Content="Exit cue (default)" />
+                <ComboBoxItem Content="Segment end" />
+                <ComboBoxItem Content="Audio length" />
+            </ComboBox>
+
+            <Button Grid.Column="6" Content="Set Up &amp; Audition" Padding="14,6"
                     Command="{Binding SetUpCommand}" />
         </Grid>
 

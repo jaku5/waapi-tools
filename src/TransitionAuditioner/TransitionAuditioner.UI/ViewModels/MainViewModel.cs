@@ -27,6 +27,13 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         private double _offsetSeconds = 1.0;
 
+        /// <summary>
+        /// Selected length basis, by index: 0 Exit cue, 1 Segment end, 2 Audio length —
+        /// matching the <see cref="SegmentLengthSource"/> enum order.
+        /// </summary>
+        [ObservableProperty]
+        private int _lengthSourceIndex;
+
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
         private bool _hasTarget;
@@ -108,6 +115,7 @@ namespace TransitionAuditioner.UI.ViewModels
                 }
 
                 _service.AuditionCueOffsetFromEndMs = (int)Math.Round(OffsetSeconds * 1000.0);
+                _service.LengthSource = (SegmentLengthSource)LengthSourceIndex;
                 await _service.SetUpAuditionAsync(_target);
                 IsReady = true;
             }

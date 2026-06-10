@@ -39,6 +39,9 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         // Hardcoded for the MVP; intended to become a UI setting later.
         public int AuditionCueOffsetFromEndMs { get; set; } = 1000;
 
+        // How a segment's length is measured when placing the audition cue.
+        public SegmentLengthSource LengthSource { get; set; } = SegmentLengthSource.ExitCue;
+
         // Shared name for the custom cues we create and for the transition rule that matches them.
         private string AuditionCueName => $"Audition_End-{AuditionCueOffsetFromEndMs}ms";
 
@@ -407,8 +410,8 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 _logger.LogInformation("Segment \"{Segment}\" measured length: {Length} ms.", segment.Name, lengthMs);
                 if (lengthMs <= AuditionCueOffsetFromEndMs)
                 {
-                    _logger.LogWarning("Skipping segment {Segment}: length {Length} ms <= offset {Offset} ms.",
-                        segment.Name, lengthMs, AuditionCueOffsetFromEndMs);
+                    Notify($"Skipped \"{segment.Name}\": measured length {lengthMs} ms is not greater than the " +
+                           $"{AuditionCueOffsetFromEndMs} ms offset (try a smaller offset or a different length basis).");
                     continue;
                 }
 
@@ -453,24 +456,79 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         }
 
         /// <summary>
-        /// Returns a segment's length in milliseconds. The primary source is the segment's own
-        /// <c>@EndPosition</c> property (the Exit cue position) — it is reliable regardless of how
-        /// many Music Tracks the segment holds, unlike <c>maxDurationSource</c>, which can come back
-        /// empty for multi-track segments. Falls back to maxDurationSource, then the largest cue
-        /// time. Returns 0 if nothing can be determined.
+        /// Returns a segment's length in milliseconds using the configured <see cref="LengthSource"/>.
+        /// For <see cref="SegmentLengthSource.ExitCue"/>, falls back to the segment end if the Exit
+        /// cue cannot be read. Returns 0 if it cannot be determined.
         /// </summary>
         private async Task<double> GetSegmentLengthMsAsync(string segmentId)
         {
-            // Primary: the segment's End Position (ms), which marks the Exit cue / segment end.
+            switch (LengthSource)
+            {
+                case SegmentLengthSource.AudioLength:
+                    return await GetAudioLengthMsAsync(segmentId);
+
+                case SegmentLengthSource.SegmentEnd:
+                    return await GetEndPositionMsAsync(segmentId);
+
+                default: // ExitCue
+                    double exitMs = await GetExitCueMsAsync(segmentId);
+                    if (exitMs > 0)
+                        return exitMs;
+
+                    double endMs = await GetEndPositionMsAsync(segmentId);
+                    if (endMs > 0)
+                        Notify($"Exit cue not readable for a segment; used Segment end ({endMs} ms) instead.");
+                    return endMs;
+            }
+        }
+
+        /// <summary>Segment length from its Exit cue (a MusicCue with <c>@CueType</c> 1).</summary>
+        private async Task<double> GetExitCueMsAsync(string segmentId)
+        {
             try
             {
-                var endResult = await QueryAsync(
-                    $"$ \"{segmentId}\"",
-                    new[] { "id", "name", "@EndPosition" });
+                // The segment's "Cues" return field lists the cue objects directly — unlike
+                // children/descendants traversal, which does not reach the Cues object-list.
+                var segResult = await QueryAsync($"$ \"{segmentId}\"", new[] { "id", "Cues" });
+                if ((segResult?[ReturnKey] as JArray)?.FirstOrDefault()?["Cues"] is not JArray cues || cues.Count == 0)
+                {
+                    _logger.LogWarning("Segment {Segment} exposed no Cues.", segmentId);
+                    return 0;
+                }
 
-                var endMs = (endResult?[ReturnKey] as JArray)?.FirstOrDefault()
-                    ?["@EndPosition"]?.Value<double>();
+                // Resolve each cue by its own id (direct object access) and pick the Exit cue.
+                foreach (var cue in cues)
+                {
+                    var cueId = cue["id"]?.ToString();
+                    if (string.IsNullOrEmpty(cueId))
+                        continue;
 
+                    var cueResult = await QueryAsync($"$ \"{cueId}\"", new[] { "id", "name", "@TimeMs", "@CueType" });
+                    var obj = (cueResult?[ReturnKey] as JArray)?.FirstOrDefault();
+                    if (obj?["@CueType"]?.Value<int>() == 1)
+                    {
+                        var timeMs = obj["@TimeMs"]?.Value<double>() ?? 0;
+                        _logger.LogInformation("Segment {Segment}: Exit cue {Cue} -> {Ms} ms.", segmentId, cueId, timeMs);
+                        return timeMs;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Exit cue lookup failed for segment {Segment}.", segmentId);
+            }
+
+            _logger.LogWarning("Exit cue not found for segment {Segment}.", segmentId);
+            return 0;
+        }
+
+        /// <summary>Segment length from <c>@EndPosition</c> (the Exit cue position).</summary>
+        private async Task<double> GetEndPositionMsAsync(string segmentId)
+        {
+            try
+            {
+                var result = await QueryAsync($"$ \"{segmentId}\"", new[] { "id", "name", "@EndPosition" });
+                var endMs = (result?[ReturnKey] as JArray)?.FirstOrDefault()?["@EndPosition"]?.Value<double>();
                 if (endMs is > 0)
                 {
                     _logger.LogInformation("Segment {Segment}: @EndPosition {Ms} ms.", segmentId, endMs);
@@ -481,17 +539,17 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             {
                 _logger.LogWarning(ex, "@EndPosition query failed for segment {Segment}.", segmentId);
             }
+            return 0;
+        }
 
-            // Fallback: trimmed duration (seconds) of the longest audio source under the segment.
+        /// <summary>Segment length from the trimmed duration of its longest audio source.</summary>
+        private async Task<double> GetAudioLengthMsAsync(string segmentId)
+        {
             try
             {
-                var durResult = await QueryAsync(
-                    $"$ \"{segmentId}\"",
-                    new[] { "id", "name", "maxDurationSource" });
-
-                var seconds = (durResult?[ReturnKey] as JArray)?.FirstOrDefault()
+                var result = await QueryAsync($"$ \"{segmentId}\"", new[] { "id", "name", "maxDurationSource" });
+                var seconds = (result?[ReturnKey] as JArray)?.FirstOrDefault()
                     ?["maxDurationSource"]?["trimmedDuration"]?.Value<double>();
-
                 if (seconds is > 0)
                 {
                     double ms = seconds.Value * 1000.0;
@@ -504,35 +562,6 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             {
                 _logger.LogWarning(ex, "maxDurationSource query failed for segment {Segment}.", segmentId);
             }
-
-            // Fallback: the largest cue @TimeMs (e.g. the Exit cue), when it is populated.
-            var queries = new[]
-            {
-                ("descendants", $"$ \"{segmentId}\" select descendants where type = \"MusicCue\""),
-                ("children",    $"$ \"{segmentId}\" select children where type = \"MusicCue\""),
-                ("ancestor",    $"$ from type MusicCue where ancestors.any(id = \"{segmentId}\")"),
-            };
-
-            foreach (var (label, waql) in queries)
-            {
-                try
-                {
-                    var result = await QueryAsync(waql, new[] { "id", "name", "@TimeMs", "@CueType" });
-
-                    if (result?[ReturnKey] is JArray cues && cues.Count > 0)
-                    {
-                        _logger.LogInformation("Segment {Segment}: {Count} cue(s) via {Relation}: {Cues}",
-                            segmentId, cues.Count, label, cues.ToString());
-                        return cues.Max(c => c["@TimeMs"]?.Value<double>() ?? 0);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Cue query ({Relation}) failed for segment {Segment}.", label, segmentId);
-                }
-            }
-
-            _logger.LogWarning("No cues found under segment {Segment} (copy may not preserve cues).", segmentId);
             return 0;
         }
 
