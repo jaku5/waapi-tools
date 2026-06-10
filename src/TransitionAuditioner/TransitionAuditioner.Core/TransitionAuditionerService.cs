@@ -173,6 +173,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 await CreateAuditionCuesAsync(session, cancellationToken);
                 session.CustomCues = await GetCustomCuesAsync(session.CopyId);
 
+                await AssignGenericPathAsync(session);
                 await TryConfigureTransitionRuleAsync(session);
 
                 Status("Creating a transport so you can audition...");
@@ -234,6 +235,45 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// as best-effort: failure is logged and surfaced, but the harness is still left
         /// playable so the user can finish the rule by hand if needed.
         /// </summary>
+        /// <summary>
+        /// Assigns the copy as the harness container's "Generic Path" — what a user would otherwise
+        /// have to drag in by hand for playback to work. A Music Switch Container plays an entry from
+        /// its <c>Entries</c> list; with no switch/state groups assigned, a single MultiSwitchEntry
+        /// whose <c>AudioNode</c> points at the copy is the generic (always-matched) path.
+        /// </summary>
+        private async Task AssignGenericPathAsync(AuditionSession session)
+        {
+            Status("Assigning the copy as the container's generic path...");
+            try
+            {
+                // 'name' is a required create argument even though MultiSwitchEntry objects are
+                // displayed unnamed — an empty string is what Wwise stores for them.
+                var entry = await _client.Call(ak.wwise.core.@object.create, new JObject(
+                    new JProperty("parent", session.SwitchContainerId),
+                    new JProperty("type", "MultiSwitchEntry"),
+                    new JProperty("list", "Entries"),
+                    new JProperty("name", ""),
+                    new JProperty("onNameConflict", "rename")));
+
+                _logger.LogInformation("MultiSwitchEntry create result: {Result}", entry?.ToString());
+                var entryId = RequireId(entry, "switch entry");
+
+                await _client.Call(ak.wwise.core.@object.setReference, new JObject(
+                    new JProperty("object", entryId),
+                    new JProperty("reference", "AudioNode"),
+                    new JProperty("value", session.CopyId)));
+
+                Status("Generic path assigned.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not assign the generic path automatically.");
+                Notify($"Generic path assignment failed: {DescribeError(ex)}");
+                Notify("Playback needs the copy as a Generic Path — drag it into the harness's " +
+                       "Music Switch tab by hand before pressing Play.");
+            }
+        }
+
         private async Task TryConfigureTransitionRuleAsync(AuditionSession session)
         {
             Status($"Configuring transition rule: None -> \"{session.Target.Name}\", Sync to Random Custom Cue (match \"{AuditionCueName}\")...");
