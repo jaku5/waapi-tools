@@ -69,7 +69,8 @@ It is the live, in-editor, single-transition counterpart to offline approaches l
    - Places one custom cue the chosen offset before each Music Segment's end, so you can jump to the run‑up into the transition instead of playing the whole segment.
    - Builds a Music Switch Container around the copy, assigns the copy as its generic path, and adds a transition rule (Source **None** → **target**, Sync to **Random Custom Cue**, matching the audition cue) as the highest‑priority rule in the container.
    - Creates a transport, ready to audition.
-4. Press **Play** in the Wwise Transport Control to hear the transition. Adjust the offset and click **Set Up & Audition** again to rebuild.
+   - Reveals the copied structure: selects it in the Project Explorer and opens the matching music editor (Playlist / Segment / Switch) focused on it, so transitions can be watched live.
+4. Click **▶ Play** in the tool to hear the transition (and **■ Stop** to stop) — playback runs through the tool's own transport, no need to touch Wwise. **Show in Project Explorer** re-reveals the copied structure on demand. Adjust the offset and click **Set Up & Audition** again to rebuild.
 5. Click **Finish & Clean Up** (or just close the window) — the entire temp Work Unit is deleted. The project is never saved.
 
 > [!NOTE]

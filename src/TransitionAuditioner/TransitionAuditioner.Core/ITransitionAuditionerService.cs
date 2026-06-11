@@ -48,7 +48,13 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// </summary>
         Task TeardownAsync();
 
-        /// <summary>Brings the copied switch container into view in the Project Explorer.</summary>
+        /// <summary>Selects the copied structure in the Project Explorer (and the Playlist Editor).</summary>
         Task ShowInProjectExplorerAsync();
+
+        /// <summary>Plays the harness through its WAAPI transport, firing the audition transition.</summary>
+        Task PlayAsync();
+
+        /// <summary>Stops playback on the harness transport.</summary>
+        Task StopAsync();
     }
 }

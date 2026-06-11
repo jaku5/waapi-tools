@@ -188,7 +188,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 }
 
                 Session = session;
-                Status("Ready. Press Play in the Wwise Transport Control to audition the transition.");
+                Status("Ready. Click Play to audition the transition.");
                 return session;
             }
             catch (Exception ex)
@@ -221,12 +221,79 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
 
         public async Task ShowInProjectExplorerAsync()
         {
-            if (Session?.SwitchContainerId is not { Length: > 0 } id)
+            // Reveal the harness's first child (the copied structure): highlight it in the Project
+            // Explorer, make sure the relevant music editor is open, and Inspect it so that editor
+            // (which follows the inspected object, not the tree selection) displays it live.
+            if (Session?.CopyId is not { Length: > 0 } id)
                 return;
 
             await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
                 new JProperty("command", "FindInProjectExplorerSelectionChannel1"),
                 new JProperty("objects", new JArray(id)))));
+
+            var view = await ResolveEditorViewAsync();
+            if (view != null)
+            {
+                await SafeCall(() => _client.Call("ak.wwise.ui.layout.getOrCreateView", new JObject(
+                    new JProperty("name", view))));
+            }
+
+            await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
+                new JProperty("command", "Inspect"),
+                new JProperty("objects", new JArray(id)))));
+        }
+
+        /// <summary>
+        /// Picks the music editor view that best fits the copied structure: the Playlist Editor
+        /// for a Music Playlist Container (or a Switch Container that holds one), the Segment Editor
+        /// for a Music Segment, or the Switch Editor otherwise.
+        /// </summary>
+        private async Task<string?> ResolveEditorViewAsync()
+        {
+            var type = Session?.Target.Type ?? string.Empty;
+
+            if (string.Equals(type, "MusicSegment", StringComparison.OrdinalIgnoreCase))
+                return "MusicSegmentEditor";
+            if (string.Equals(type, "MusicPlaylistContainer", StringComparison.OrdinalIgnoreCase))
+                return "MusicPlaylistEditor";
+            if (!string.Equals(type, "MusicSwitchContainer", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            // Switch Container: prefer the Playlist Editor when it contains a playlist.
+            try
+            {
+                var result = await QueryAsync(
+                    $"$ \"{Session!.CopyId}\" select descendants where type = \"MusicPlaylistContainer\"",
+                    new[] { "id" });
+                if (result?[ReturnKey] is JArray playlists && playlists.Count > 0)
+                    return "MusicPlaylistEditor";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to probe for a MusicPlaylistContainer.");
+            }
+
+            return "MusicSwitchEditor";
+        }
+
+        public async Task PlayAsync()
+        {
+            if (Session?.TransportId is int transportId)
+            {
+                await _client.Call(ak.wwise.core.transport.executeAction, new JObject(
+                    new JProperty("transport", transportId),
+                    new JProperty("action", "play")));
+            }
+        }
+
+        public async Task StopAsync()
+        {
+            if (Session?.TransportId is int transportId)
+            {
+                await _client.Call(ak.wwise.core.transport.executeAction, new JObject(
+                    new JProperty("transport", transportId),
+                    new JProperty("action", "stop")));
+            }
         }
 
         /// <summary>

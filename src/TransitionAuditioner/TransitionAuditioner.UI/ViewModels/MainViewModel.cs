@@ -40,11 +40,15 @@ namespace TransitionAuditioner.UI.ViewModels
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
+        [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+        [NotifyCanExecuteChangedFor(nameof(StopCommand))]
         private bool _isReady;
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
+        [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+        [NotifyCanExecuteChangedFor(nameof(StopCommand))]
         private bool _isBusy;
 
         public ObservableCollection<string> Log { get; } = new();
@@ -118,6 +122,10 @@ namespace TransitionAuditioner.UI.ViewModels
                 _service.LengthSource = (SegmentLengthSource)LengthSourceIndex;
                 await _service.SetUpAuditionAsync(_target);
                 IsReady = true;
+
+                // Reveal the copied structure once setup (and its undo group) has finished, so the
+                // selection actually takes and the editor follows it.
+                await _service.ShowInProjectExplorerAsync();
             }
             catch (Exception ex)
             {
@@ -133,6 +141,12 @@ namespace TransitionAuditioner.UI.ViewModels
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
         private async Task ShowInExplorerAsync() => await _service.ShowInProjectExplorerAsync();
+
+        [RelayCommand(CanExecute = nameof(CanInteract))]
+        private async Task PlayAsync() => await _service.PlayAsync();
+
+        [RelayCommand(CanExecute = nameof(CanInteract))]
+        private async Task StopAsync() => await _service.StopAsync();
 
         [RelayCommand]
         private void Finish() => Application.Current?.MainWindow?.Close();
