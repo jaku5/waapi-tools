@@ -586,13 +586,41 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             return new List<MusicObjectInfo>();
         }
 
-        /// <summary>Best-effort rollback: destroy the transport, then delete the temp Work Unit.</summary>
+        /// <summary>
+        /// Best-effort rollback: stop playback, destroy the transport, exclude the temp structure,
+        /// then delete the temp Work Unit. Stopping first avoids a Wwise crash when the structure is
+        /// deleted mid-playback; excluding first sidesteps a version-specific crash on deleting an
+        /// included interactive-music object. Both are harmless (the temp Work Unit is never saved).
+        /// </summary>
         private async Task SafeTeardownAsync(AuditionSession session)
         {
+            // Stop all transports — covers playback the user may have started on any transport,
+            // not just the one we created.
+            await SafeCall(() => _client.Call(ak.wwise.core.transport.executeAction, new JObject(
+                new JProperty("action", "stop"))));
+
             if (session.TransportId is int transportId)
             {
                 await SafeCall(() => _client.Call(ak.wwise.core.transport.destroy, new JObject(
                     new JProperty("transport", transportId))));
+            }
+
+            // Move the Wwise selection off the temp structure: deleting the Work Unit while one of
+            // its Music Segments is selected crashes Wwise. Reselect the original target, which is
+            // outside the temp Work Unit, so nothing being deleted remains selected.
+            if (!string.IsNullOrEmpty(session.Target.Id))
+            {
+                await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
+                    new JProperty("command", "FindInProjectExplorerSelectionChannel1"),
+                    new JProperty("objects", new JArray(session.Target.Id)))));
+            }
+
+            // Exclude the harness before deleting, to dodge the crash-on-deleting-an-included
+            // interactive-music-object bug. Inclusion only affects SoundBank generation, so this
+            // has no side effects on a throwaway, never-saved Work Unit.
+            if (!string.IsNullOrEmpty(session.SwitchContainerId))
+            {
+                await SafeCall(() => SetInclusionAsync(session.SwitchContainerId, false));
             }
 
             if (!string.IsNullOrEmpty(session.TempWorkUnitId))
@@ -600,6 +628,14 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 await SafeCall(() => _client.Call(ak.wwise.core.@object.delete, new JObject(
                     new JProperty("object", session.TempWorkUnitId))));
             }
+        }
+
+        private Task SetInclusionAsync(string objectId, bool included)
+        {
+            return _client.Call(ak.wwise.core.@object.setProperty, new JObject(
+                new JProperty("object", objectId),
+                new JProperty("property", "Inclusion"),
+                new JProperty("value", included)));
         }
 
         private async Task SafeCall(Func<Task> action)
