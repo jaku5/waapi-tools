@@ -28,6 +28,15 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core.Models
         /// <summary>True once the transition rule was configured without error.</summary>
         public bool TransitionRuleConfigured { get; set; }
 
+            /// <summary>Id of the None-&gt;target MusicTransition rule created on the harness.</summary>
+        public string TransitionId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Id of the Music Playlist Editor view the tool opened (empty if none was opened, or one
+        /// was already open). Closed on teardown so the tool doesn't leave a view it created behind.
+        /// </summary>
+        public string CreatedPlaylistViewId { get; set; } = string.Empty;
+
         /// <summary>Custom cues discovered under the target, for reporting/diagnostics.</summary>
         public List<MusicObjectInfo> CustomCues { get; set; } = new List<MusicObjectInfo>();
     }

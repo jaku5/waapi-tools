@@ -22,6 +22,9 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// <summary>How a segment's length is measured when placing the audition cue.</summary>
         SegmentLengthSource LengthSource { get; set; }
 
+        /// <summary>Whether the Music Playlist Editor is opened on reveal (playlist-container targets).</summary>
+        bool OpenPlaylistEditor { get; set; }
+
         /// <summary>The currently set-up audition, or null if none is active.</summary>
         AuditionSession? Session { get; }
 

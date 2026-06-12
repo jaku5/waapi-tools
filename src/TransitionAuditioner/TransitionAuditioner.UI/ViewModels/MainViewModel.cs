@@ -34,6 +34,10 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         private int _lengthSourceIndex;
 
+        /// <summary>Whether to open the Music Playlist Editor on setup (playlist targets only).</summary>
+        [ObservableProperty]
+        private bool _openPlaylistEditor = true;
+
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
         private bool _hasTarget;
@@ -120,6 +124,7 @@ namespace TransitionAuditioner.UI.ViewModels
 
                 _service.AuditionCueOffsetFromEndMs = (int)Math.Round(OffsetSeconds * 1000.0);
                 _service.LengthSource = (SegmentLengthSource)LengthSourceIndex;
+                _service.OpenPlaylistEditor = OpenPlaylistEditor;
                 await _service.SetUpAuditionAsync(_target);
                 IsReady = true;
 
@@ -140,7 +145,11 @@ namespace TransitionAuditioner.UI.ViewModels
         private bool CanInteract => IsReady && !IsBusy;
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
-        private async Task ShowInExplorerAsync() => await _service.ShowInProjectExplorerAsync();
+        private async Task ShowInExplorerAsync()
+        {
+            _service.OpenPlaylistEditor = OpenPlaylistEditor;
+            await _service.ShowInProjectExplorerAsync();
+        }
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
         private async Task PlayAsync() => await _service.PlayAsync();
