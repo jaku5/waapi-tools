@@ -672,13 +672,21 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                     new JProperty("transport", transportId))));
             }
 
-            // Move the Wwise selection off the temp structure: deleting the Work Unit while one of
-            // its Music Segments is selected crashes Wwise. Reselect the original target, which is
-            // outside the temp Work Unit, so nothing being deleted remains selected.
+            // Move the Wwise selection AND the inspector off the temp structure before deleting it:
+            // deleting the Work Unit while one of its Music Segments is selected or inspected crashes
+            // Wwise. Both the tree selection (FindInProjectExplorer) and the inspected object
+            // (Inspect — which the editors follow) must point at the original target, which lives
+            // outside the temp Work Unit.
             if (!string.IsNullOrEmpty(session.Target.Id))
             {
+                var targetArray = new JArray(session.Target.Id);
+
                 await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
                     new JProperty("command", "FindInProjectExplorerSelectionChannel1"),
+                    new JProperty("objects", targetArray))));
+
+                await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
+                    new JProperty("command", "Inspect"),
                     new JProperty("objects", new JArray(session.Target.Id)))));
             }
 
