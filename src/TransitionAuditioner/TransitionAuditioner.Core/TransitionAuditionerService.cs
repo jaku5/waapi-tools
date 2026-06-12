@@ -62,6 +62,11 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         public event EventHandler<string>? NotificationRequested;
         public event EventHandler? Disconnected;
 
+        /// <summary>Raised with a short description of the current Wwise selection as it changes.</summary>
+        public event EventHandler<string>? SelectionChanged;
+
+        private int? _selectionSubscriptionId;
+
         public bool IsConnected { get; private set; }
         public bool IsSetUp => Session != null;
         public string? ProjectName { get; private set; }
@@ -100,11 +105,58 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             {
                 _logger.LogWarning("Failed to fetch project info: {Message}", ex.Message);
             }
+
+            // Track the Wwise selection live for the on-screen indicator, and seed it once.
+            try
+            {
+                var options = new JObject(new JProperty(ReturnKey, new JArray("id", "name", "type")));
+                _selectionSubscriptionId = await _client.Subscribe(
+                    ak.wwise.ui.selectionChanged, options, OnWwiseSelectionChanged);
+
+                var current = await _client.Call(ak.wwise.ui.getSelectedObjects, null, options);
+                RaiseSelection(current);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to subscribe to selection changes: {Message}", ex.Message);
+            }
+        }
+
+        private void OnWwiseSelectionChanged(JObject json) => RaiseSelection(json);
+
+        private void RaiseSelection(JObject? json)
+        {
+            var objects = json?["objects"] as JArray;
+            string text;
+            if (objects == null || objects.Count == 0)
+            {
+                text = "(nothing selected)";
+            }
+            else
+            {
+                var first = objects[0];
+                text = $"{first["name"]} ({first["type"]})";
+                if (objects.Count > 1)
+                    text += $"  +{objects.Count - 1} more";
+            }
+
+            SelectionChanged?.Invoke(this, text);
         }
 
         public void Disconnect()
         {
             IsConnected = false;
+
+            // Politely unsubscribe from selection changes before the socket closes. Run it off the
+            // UI thread (the WAMP client captures the sync context, so blocking here directly would
+            // deadlock); the socket close is the backstop if it doesn't finish in time.
+            if (_selectionSubscriptionId is int subId)
+            {
+                _selectionSubscriptionId = null;
+                try { Task.Run(() => _client.Unsubscribe(subId)).Wait(2000); }
+                catch { /* best effort — server cleans up on socket close anyway */ }
+            }
+
             _client.Disconnect();
         }
 
@@ -127,6 +179,14 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             if (match == null)
             {
                 Notify("The selection is not an interactive-music object. Select a Music Switch Container, Music Playlist Container, or Music Segment.");
+                return null;
+            }
+
+            // Reject the tool's own temporary harness (or anything inside it): its unique name
+            // appears in the path of the harness and every copied descendant.
+            if (match["path"]?.ToString()?.Contains(HarnessContainerName) == true)
+            {
+                Notify("That's the audition tool's own temporary harness — select a production object instead.");
                 return null;
             }
 

@@ -62,7 +62,7 @@ It is the live, in-editor, single-transition counterpart to offline approaches l
 
 #### How it works
 1. In Wwise, **select** a Music Switch Container, Music Playlist Container, or Music Segment in the Project Explorer.
-2. Run **Extra → Audition Music Transition**. The tool connects and shows the selected target.
+2. Run **Extra → Audition Music Transition**. The tool connects and shows the selected target. To change the target later without reopening, select a different object in Wwise and click **Pull Selection**.
 3. Set the **cue offset from end** (in seconds, default 1 s) and the **length basis** — *Exit cue* (where the transition fires, the default), *Segment end* (the segment's `@EndPosition`, including any post-exit tail), or *Audio length* (the longest audio source's trimmed duration) — then click **Set Up & Audition**. The tool:
    - Builds a Music Switch Container harness at the root of the target's own Work Unit (wrapped in a single undo group, so your undo history is preserved).
    - **Copies** the selected structure into the harness (the production structure is copied, never moved or mutated).

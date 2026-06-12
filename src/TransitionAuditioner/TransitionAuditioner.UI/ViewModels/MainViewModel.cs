@@ -23,6 +23,10 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         private string _targetName = "—";
 
+        /// <summary>Live description of the current Wwise selection (independent of the chosen target).</summary>
+        [ObservableProperty]
+        private string _currentSelection = "—";
+
         /// <summary>Cue offset from the end of each segment, in seconds (default 1 s).</summary>
         [ObservableProperty]
         private double _offsetSeconds = 1.0;
@@ -53,6 +57,7 @@ namespace TransitionAuditioner.UI.ViewModels
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
         [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
         [NotifyCanExecuteChangedFor(nameof(StopCommand))]
+        [NotifyCanExecuteChangedFor(nameof(PullSelectionCommand))]
         private bool _isBusy;
 
         public ObservableCollection<string> Log { get; } = new();
@@ -63,6 +68,7 @@ namespace TransitionAuditioner.UI.ViewModels
             _service.StatusUpdated += (_, msg) => Append(msg);
             _service.NotificationRequested += (_, msg) => Append("⚠ " + msg);
             _service.Disconnected += (_, _) => Append("Disconnected from Wwise.");
+            _service.SelectionChanged += (_, text) => OnUiThread(() => CurrentSelection = text);
         }
 
         /// <summary>Connects and identifies the selected target, but does not build anything yet.</summary>
@@ -76,21 +82,50 @@ namespace TransitionAuditioner.UI.ViewModels
                     ? $"{p}  ·  Wwise {_service.WwiseVersion}"
                     : "Connected.";
 
-                _target = await _service.GetSelectedTargetAsync();
-                if (_target == null)
-                {
-                    SubHeader = "Select a music container in Wwise, then reopen the tool.";
-                    return;
-                }
-
-                TargetName = $"{_target.Name}  ({_target.Type})";
-                HasTarget = true;
-                Append("Ready. Set the cue offset, then click Set Up & Audition.");
+                if (await RefreshTargetAsync())
+                    Append("Ready. Set the cue offset, then click Set Up & Audition.");
+                else
+                    SubHeader = "Select a music object in Wwise and click Pull Selection.";
             }
             catch (Exception ex)
             {
                 Append("✖ " + ex.Message);
                 SubHeader = "Connection failed — see log.";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>Re-reads the current Wwise selection into the target. Leaves the existing target
+        /// untouched (and lets the service explain why) if the selection isn't a valid target.</summary>
+        private async Task<bool> RefreshTargetAsync()
+        {
+            var target = await _service.GetSelectedTargetAsync();
+            if (target == null)
+                return false;
+
+            _target = target;
+            TargetName = $"{target.Name}  ({target.Type})";
+            HasTarget = true;
+            return true;
+        }
+
+        private bool CanPull => !IsBusy;
+
+        [RelayCommand(CanExecute = nameof(CanPull))]
+        private async Task PullSelectionAsync()
+        {
+            IsBusy = true;
+            try
+            {
+                if (await RefreshTargetAsync())
+                    Append($"Target: {TargetName}");
+            }
+            catch (Exception ex)
+            {
+                Append("✖ " + ex.Message);
             }
             finally
             {
@@ -177,16 +212,15 @@ namespace TransitionAuditioner.UI.ViewModels
             }
         }
 
-        private void Append(string message)
+        private void Append(string message) => OnUiThread(() => Log.Add(message));
+
+        /// <summary>Runs an action on the UI thread (WAAPI events arrive on background threads).</summary>
+        private static void OnUiThread(Action action)
         {
             if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
-            {
-                dispatcher.Invoke(() => Log.Add(message));
-            }
+                dispatcher.Invoke(action);
             else
-            {
-                Log.Add(message);
-            }
+                action();
         }
     }
 }
