@@ -27,9 +27,10 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
 
         private const string ReturnKey = "return";
         private const string WaqlKey = "waql";
-        private const string InteractiveMusicHierarchy = "\\Interactive Music Hierarchy";
-        private const string TempWorkUnitName = "TransitionAuditioner_Temp";
-        private const string HarnessContainerName = "AuditionHarness";
+
+        // Clearly-temporary name: the harness lives in the user's Work Unit until teardown deletes it,
+        // so if it ever leaks (e.g. a crash mid-audition) it is obvious and easy to remove by hand.
+        private const string HarnessContainerName = "TransitionAuditioner_TEMP_DELETE_ME";
 
         // @CueType value for a Custom cue (Entry = 0, Exit = 1, Custom = 2).
         private const int CustomCueType = 2;
@@ -142,42 +143,31 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
 
             var session = new AuditionSession { Target = target };
 
-            // Group the whole build so that, combined with the temp Work Unit, the user
-            // can also collapse it with a single Ctrl+Z even if teardown is skipped.
+            // Build inside the target's own Work Unit (not a throwaway one) so the user's undo
+            // history is preserved — Work Unit create/delete would flush it. The build is wrapped
+            // in an undo group (one tidy entry); teardown deletes the harness. The production
+            // structure is copied, never moved, so it is never mutated.
             await _client.Call(ak.wwise.core.undo.beginGroup);
 
             try
             {
-                Status($"Creating temporary Work Unit for \"{target.Name}\"...");
-                var workUnit = await _client.Call(ak.wwise.core.@object.create, new JObject(
-                    new JProperty("parent", InteractiveMusicHierarchy),
-                    new JProperty("type", "WorkUnit"),
-                    new JProperty("name", TempWorkUnitName),
-                    new JProperty("onNameConflict", "rename")));
-                session.TempWorkUnitId = RequireId(workUnit, "temp Work Unit");
-                cancellationToken.ThrowIfCancellationRequested();
+                var workUnitId = await GetTargetWorkUnitIdAsync(target.Id);
 
-                Status("Copying the target structure into the temporary Work Unit...");
-                var copy = await _client.Call(ak.wwise.core.@object.copy, new JObject(
-                    new JProperty("object", target.Id),
-                    new JProperty("parent", session.TempWorkUnitId),
-                    new JProperty("onNameConflict", "rename")));
-                session.CopyId = RequireId(copy, "structure copy");
-                cancellationToken.ThrowIfCancellationRequested();
-
-                Status("Building the Music Switch Container harness...");
+                Status("Building the audition harness...");
                 var switchContainer = await _client.Call(ak.wwise.core.@object.create, new JObject(
-                    new JProperty("parent", session.TempWorkUnitId),
+                    new JProperty("parent", workUnitId),
                     new JProperty("type", "MusicSwitchContainer"),
                     new JProperty("name", HarnessContainerName),
                     new JProperty("onNameConflict", "rename")));
                 session.SwitchContainerId = RequireId(switchContainer, "harness container");
+                cancellationToken.ThrowIfCancellationRequested();
 
-                Status("Reparenting the copy under the harness...");
-                await _client.Call(ak.wwise.core.@object.move, new JObject(
-                    new JProperty("object", session.CopyId),
+                Status($"Copying \"{target.Name}\" into the harness...");
+                var copy = await _client.Call(ak.wwise.core.@object.copy, new JObject(
+                    new JProperty("object", target.Id),
                     new JProperty("parent", session.SwitchContainerId),
                     new JProperty("onNameConflict", "rename")));
+                session.CopyId = RequireId(copy, "structure copy");
                 cancellationToken.ThrowIfCancellationRequested();
 
                 await CreateAuditionCuesAsync(session, cancellationToken);
@@ -208,11 +198,21 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             }
             finally
             {
-                // End (but never cancel) the group: the create calls already happened, and
-                // teardown's delete is what we rely on for cleanup, not group cancellation.
+                // The build contains only undoable object operations now (no Work Unit create),
+                // so the group ends cleanly and collapses the build into one undo entry.
                 await SafeCall(() => _client.Call(ak.wwise.core.undo.endGroup, new JObject(
                     new JProperty("displayName", "Set up transition audition"))));
             }
+        }
+
+        /// <summary>Resolves the Work Unit that contains the target, to host the harness at its root.</summary>
+        private async Task<string> GetTargetWorkUnitIdAsync(string targetId)
+        {
+            var result = await QueryAsync($"$ \"{targetId}\"", new[] { "id", "name", "workunit" });
+            var workUnitId = (result?[ReturnKey] as JArray)?.FirstOrDefault()?["workunit"]?["id"]?.ToString();
+            if (string.IsNullOrEmpty(workUnitId))
+                throw new InvalidOperationException("Could not resolve the target's Work Unit.");
+            return workUnitId;
         }
 
         public async Task TeardownAsync()
@@ -735,16 +735,18 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
 
             // Exclude the harness before deleting, to dodge the crash-on-deleting-an-included
             // interactive-music-object bug. Inclusion only affects SoundBank generation, so this
-            // has no side effects on a throwaway, never-saved Work Unit.
+            // has no side effects on a throwaway object that is never saved. The exclude + delete
+            // are grouped so they collapse into a single undo entry.
             if (!string.IsNullOrEmpty(session.SwitchContainerId))
             {
+                await SafeCall(() => _client.Call(ak.wwise.core.undo.beginGroup));
                 await SafeCall(() => SetInclusionAsync(session.SwitchContainerId, false));
-            }
 
-            if (!string.IsNullOrEmpty(session.TempWorkUnitId))
-            {
+                // Delete the harness — its whole subtree (copy, cues, transition rule) goes with it.
                 await SafeCall(() => _client.Call(ak.wwise.core.@object.delete, new JObject(
-                    new JProperty("object", session.TempWorkUnitId))));
+                    new JProperty("object", session.SwitchContainerId))));
+                await SafeCall(() => _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                    new JProperty("displayName", "Remove transition audition"))));
             }
         }
 

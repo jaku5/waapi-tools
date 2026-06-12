@@ -13,10 +13,10 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core.Models
         /// <summary>The original object the user selected (never mutated).</summary>
         public MusicObjectInfo Target { get; set; } = new MusicObjectInfo();
 
-        /// <summary>Id (GUID) of the throwaway Work Unit in the Interactive Music Hierarchy.</summary>
-        public string TempWorkUnitId { get; set; } = string.Empty;
-
-        /// <summary>Id of the Music Switch Container scaffolded around the copy.</summary>
+        /// <summary>
+        /// Id of the Music Switch Container harness, built in the target's Work Unit. Deleting it
+        /// removes the whole scaffolding (copy, cues, transition rule) on teardown.
+        /// </summary>
         public string SwitchContainerId { get; set; } = string.Empty;
 
         /// <summary>Id of the copied structure that lives inside the temp Work Unit.</summary>

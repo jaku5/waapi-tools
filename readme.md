@@ -63,15 +63,15 @@ It is the live, in-editor, single-transition counterpart to offline approaches l
 #### How it works
 1. In Wwise, **select** a Music Switch Container, Music Playlist Container, or Music Segment in the Project Explorer.
 2. Run **Extra → Audition Music Transition**. The tool connects and shows the selected target.
-3. Set the **cue offset from end** (in seconds, default 1 s) and the **length basis** — *Exit cue* (where the transition fires, the default), *Segment end* (the segment's `@EndPosition`, including any post-exit tail), or *Audio length* (the longest audio source's trimmed duration) — then click **Set Up & Audition**. The tool, **non-destructively**:
-   - Creates a throwaway Work Unit in the Interactive Music Hierarchy.
-   - **Copies** the selected structure into it (the production structure is never touched).
+3. Set the **cue offset from end** (in seconds, default 1 s) and the **length basis** — *Exit cue* (where the transition fires, the default), *Segment end* (the segment's `@EndPosition`, including any post-exit tail), or *Audio length* (the longest audio source's trimmed duration) — then click **Set Up & Audition**. The tool:
+   - Builds a Music Switch Container harness at the root of the target's own Work Unit (wrapped in a single undo group, so your undo history is preserved).
+   - **Copies** the selected structure into the harness (the production structure is copied, never moved or mutated).
    - Places one custom cue the chosen offset before each Music Segment's end, so you can jump to the run‑up into the transition instead of playing the whole segment.
-   - Builds a Music Switch Container around the copy, assigns the copy as its generic path, and adds a transition rule (Source **None** → **target**, Sync to **Random Custom Cue**, matching the audition cue) as the highest‑priority rule in the container.
+   - Assigns the copy as the harness's generic path, and adds a transition rule (Source **None** → **target**, Sync to **Random Custom Cue**, matching the audition cue) as the highest‑priority rule in the container.
    - Creates a transport, ready to audition.
    - Selects the harness in the Project Explorer and inspects it (its Transitions tab holds the None→target rule). For a Music Playlist Container target, if **Open Playlist Editor** is checked, it also opens the Music Playlist Editor showing the copied playlist.
 4. Click **▶ Play** in the tool to hear the transition (and **■ Stop** to stop) — playback runs through the tool's own transport, no need to touch Wwise. **Show in Project Explorer** re-reveals on demand. Adjust the offset and click **Set Up & Audition** again to rebuild.
-5. Click **Finish & Clean Up** (or just close the window) — the entire temp Work Unit is deleted. The project is never saved.
+5. Click **Finish & Clean Up** (or just close the window) — the harness (and everything in it) is deleted. The project is never saved.
 
 > [!NOTE]
 > This is an MVP (v1). It sets up the audition and you press Play; a fully automatic playback trigger and a transition-picker panel are planned for a later version. The transition rule is built automatically (the `MusicTransition` object model is identical across Wwise 2021–2025); if it can't be set for any reason, the harness is still left playable so you can finish the rule by hand. Teardown runs even on error, so the tool never leaves scaffolding behind.
