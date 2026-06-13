@@ -33,5 +33,8 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core.Models
 
         /// <summary>Custom cues discovered under the target, for reporting/diagnostics.</summary>
         public List<MusicObjectInfo> CustomCues { get; set; } = new List<MusicObjectInfo>();
+
+        /// <summary>Segments that got no audition cue because their length did not exceed the offset.</summary>
+        public List<SegmentSkip> SkippedSegments { get; set; } = new List<SegmentSkip>();
     }
 }

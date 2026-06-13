@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -309,6 +310,9 @@ namespace TransitionAuditioner.UI.ViewModels
             if (OffsetSeconds <= 0)
             {
                 Append("⚠ Cue offset must be greater than 0 seconds.");
+                ShowMessage("Cue offset too small",
+                    "The cue offset must be greater than 0 seconds.\n\n" +
+                    "Enter a positive offset so the audition cue can sit before each segment's end, then try again.");
                 return;
             }
 
@@ -324,12 +328,14 @@ namespace TransitionAuditioner.UI.ViewModels
 
                 _service.AuditionCueOffsetFromEndMs = (int)Math.Round(OffsetSeconds * 1000.0);
                 _service.LengthSource = (SegmentLengthSource)LengthSourceIndex;
-                await _service.SetUpAuditionAsync(_target);
+                var session = await _service.SetUpAuditionAsync(_target);
                 IsReady = true;
 
                 // Reveal the copied structure once setup (and its undo group) has finished, so the
                 // selection actually takes and the editor follows it.
                 await _service.ShowInProjectExplorerAsync();
+
+                WarnAboutSkippedSegments(session);
             }
             catch (Exception ex)
             {
@@ -396,6 +402,36 @@ namespace TransitionAuditioner.UI.ViewModels
 
         private void Append(string message) =>
             OnUiThread(() => LogText = $"{DateTime.Now:HH:mm:ss}: {message}\n{LogText}");
+
+        /// <summary>If any segments were skipped during setup, surfaces them in one summary dialog
+        /// (the per-segment detail is already in the Activity log).</summary>
+        private void WarnAboutSkippedSegments(AuditionSession session)
+        {
+            if (session.SkippedSegments.Count == 0)
+                return;
+
+            double offsetSeconds = _service.AuditionCueOffsetFromEndMs / 1000.0;
+            var lines = session.SkippedSegments
+                .Select(s => $"  • {s.Name} ({s.MeasuredLengthMs / 1000.0:0.###} s)");
+
+            string body =
+                $"{session.SkippedSegments.Count} segment(s) got no audition cue because their measured " +
+                $"length is not greater than the {offsetSeconds:0.###} s offset:\n\n" +
+                string.Join("\n", lines) +
+                "\n\nTry a smaller offset or a different length basis, then run Set Up & Audition again.";
+
+            ShowMessage("Some segments were skipped", body);
+        }
+
+        /// <summary>Shows a modal, theme-styled notification dialog owned by the main window.</summary>
+        private static void ShowMessage(string title, string message) => OnUiThread(() =>
+        {
+            var owner = Application.Current?.MainWindow;
+            if (owner == null)
+                return;
+
+            new Dialogs.MessageDialog(title, message, owner).ShowDialog();
+        });
 
         /// <summary>Runs an action on the UI thread (WAAPI events arrive on background threads).</summary>
         private static void OnUiThread(Action action)

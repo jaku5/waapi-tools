@@ -673,6 +673,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 {
                     Notify($"Skipped \"{segment.Name}\": measured length {lengthMs} ms is not greater than the " +
                            $"{AuditionCueOffsetFromEndMs} ms offset (try a smaller offset or a different length basis).");
+                    session.SkippedSegments.Add(new SegmentSkip { Name = segment.Name, MeasuredLengthMs = lengthMs });
                     continue;
                 }
 
