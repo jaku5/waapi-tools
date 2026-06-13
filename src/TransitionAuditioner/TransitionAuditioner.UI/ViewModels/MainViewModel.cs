@@ -25,11 +25,20 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         private bool _isActivityVisible;
 
-        [ObservableProperty]
-        private string _header = "Transition Auditioner";
+        /// <summary>Window title carrying connection state and the open project / Wwise version.</summary>
+        public string WindowTitle
+        {
+            get
+            {
+                const string baseTitle = "Transition Auditioner";
+                if (!_service.IsConnected)
+                    return $"{baseTitle} - [{(IsBusy ? "Connecting..." : "Disconnected")}]";
 
-        [ObservableProperty]
-        private string _subHeader = "Connecting to Wwise...";
+                string projectPart = !string.IsNullOrEmpty(_service.ProjectName) ? $" - {_service.ProjectName}" : "";
+                string versionPart = !string.IsNullOrEmpty(_service.WwiseVersion) ? $" (Wwise {_service.WwiseVersion})" : "";
+                return $"{baseTitle}{projectPart}{versionPart}";
+            }
+        }
 
         [ObservableProperty]
         private string _targetName = "—";
@@ -83,6 +92,7 @@ namespace TransitionAuditioner.UI.ViewModels
         private bool _isReady;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(WindowTitle))]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
         [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
@@ -99,7 +109,11 @@ namespace TransitionAuditioner.UI.ViewModels
             _service = service;
             _service.StatusUpdated += (_, msg) => Append(msg);
             _service.NotificationRequested += (_, msg) => Append("⚠ " + msg);
-            _service.Disconnected += (_, _) => Append("Disconnected from Wwise.");
+            _service.Disconnected += (_, _) => OnUiThread(() =>
+            {
+                Append("Disconnected from Wwise.");
+                OnPropertyChanged(nameof(WindowTitle));
+            });
             _service.SelectionChanged += (_, info) => OnUiThread(() =>
             {
                 _currentSelectionId = info.Id;
@@ -146,19 +160,16 @@ namespace TransitionAuditioner.UI.ViewModels
             try
             {
                 await _service.ConnectAsync();
-                SubHeader = _service.ProjectName is { Length: > 0 } p
-                    ? $"{p}  ·  Wwise {_service.WwiseVersion}"
-                    : "Connected.";
+                OnPropertyChanged(nameof(WindowTitle));
 
                 if (await RefreshTargetAsync())
                     Append("Ready. Set the cue offset, then click Set Up & Audition.");
                 else
-                    SubHeader = "Select a music object in Wwise and click Pull Selection.";
+                    Append("Select a music object in Wwise and click Pull Selection.");
             }
             catch (Exception ex)
             {
                 Append("✖ " + ex.Message);
-                SubHeader = "Connection failed — see log.";
             }
             finally
             {
