@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,6 +20,10 @@ namespace TransitionAuditioner.UI.ViewModels
 
         /// <summary>Segoe Fluent glyph for the theme toggle: sun when dark (switch to light), moon when light.</summary>
         public string ThemeIcon => IsDarkTheme ? "" : "";
+
+        /// <summary>Whether the Activity log panel is shown. Hidden by default to keep the window compact.</summary>
+        [ObservableProperty]
+        private bool _isActivityVisible;
 
         [ObservableProperty]
         private string _header = "Transition Auditioner";
@@ -68,7 +71,9 @@ namespace TransitionAuditioner.UI.ViewModels
         [NotifyCanExecuteChangedFor(nameof(PullSelectionCommand))]
         private bool _isBusy;
 
-        public ObservableCollection<string> Log { get; } = new();
+        /// <summary>Activity log as a single string, newest entry on top, each line timestamped.</summary>
+        [ObservableProperty]
+        private string _logText = string.Empty;
 
         public MainViewModel(ITransitionAuditionerService service)
         {
@@ -91,6 +96,9 @@ namespace TransitionAuditioner.UI.ViewModels
             IsDarkTheme = !IsDarkTheme;
             App.SetTheme(IsDarkTheme);
         }
+
+        [RelayCommand]
+        private void ToggleActivity() => IsActivityVisible = !IsActivityVisible;
 
         private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
         {
@@ -246,7 +254,8 @@ namespace TransitionAuditioner.UI.ViewModels
             }
         }
 
-        private void Append(string message) => OnUiThread(() => Log.Add(message));
+        private void Append(string message) =>
+            OnUiThread(() => LogText = $"{DateTime.Now:HH:mm:ss}: {message}\n{LogText}");
 
         /// <summary>Runs an action on the UI thread (WAAPI events arrive on background threads).</summary>
         private static void OnUiThread(Action action)

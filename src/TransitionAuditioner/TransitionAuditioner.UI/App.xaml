@@ -10,6 +10,8 @@
 
             <FontFamily x:Key="FluentIcons">Segoe Fluent Icons</FontFamily>
 
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
             <Style x:Key="FluentIcon" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource FluentIcons}" />
                 <Setter Property="FontSize" Value="20" />
