@@ -43,8 +43,9 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         // How a segment's length is measured when placing the audition cue.
         public SegmentLengthSource LengthSource { get; set; } = SegmentLengthSource.ExitCue;
 
-        // Whether to open the Music Playlist Editor on reveal (for playlist-container targets).
-        public bool OpenPlaylistEditor { get; set; } = true;
+        // View id of a Music Playlist Editor this tool opened (2025+ only, where it can be closed
+        // again). Empty when none is tracked. Closed during teardown.
+        private string _createdPlaylistViewId = string.Empty;
 
         // Shared name for the custom cues we create and for the transition rule that matches them.
         private string AuditionCueName => $"Audition_End-{AuditionCueOffsetFromEndMs}ms";
@@ -286,6 +287,10 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
 
         public async Task TeardownAsync()
         {
+            // Close any Music Playlist Editor we opened, even if no audition was ever set up
+            // (the user may have opened it manually before/without a setup).
+            await CloseCreatedPlaylistEditorAsync();
+
             if (Session == null)
                 return;
 
@@ -299,18 +304,6 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         {
             if (Session?.SwitchContainerId is not { Length: > 0 } harnessId)
                 return;
-
-            // For a Music Playlist Container target (when the user opted in): open the Playlist
-            // Editor and inspect the copied playlist so the editor shows it. The Playlist Editor
-            // keeps showing that playlist even after we inspect the harness next (it doesn't clear
-            // for a non-playlist object), so the playlist stays visible for live audition feedback.
-            if (OpenPlaylistEditor
-                && string.Equals(Session.Target.Type, "MusicPlaylistContainer", StringComparison.OrdinalIgnoreCase)
-                && Session.CopyId is { Length: > 0 } copyId)
-            {
-                await OpenPlaylistEditorAsync(Session);
-                await SafeCall(() => Inspect(copyId));
-            }
 
             // Select + inspect the harness so its editor (with the Transitions tab holding our
             // None->target rule) is shown. Editors follow the inspected object, not the tree
@@ -326,33 +319,68 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             new JProperty("objects", new JArray(objectId))));
 
         /// <summary>
-        /// Opens the Music Playlist Editor, recording its view id for teardown only if the tool
-        /// actually created it (i.e. one was not already open). Reports to the Activity log.
+        /// Opens the Music Playlist Editor immediately. Only versions with closeView (2025+) can
+        /// clean the view up, so only there do we track the view id (and only when we actually
+        /// created it, i.e. one was not already open) for closing during teardown; older versions
+        /// just open it and leave it.
         /// </summary>
-        private async Task OpenPlaylistEditorAsync(AuditionSession session)
+        public async Task OpenPlaylistEditorAsync()
         {
-            if (!string.IsNullOrEmpty(session.CreatedPlaylistViewId))
-                return; // Already opened by us this session.
-
-            // Only versions with closeView (2025+) can clean the view up, so only track it there;
-            // otherwise just open it and leave it (no error spam on Finish).
             bool canClose = _wwiseYear >= 2025;
             bool existedBefore = canClose && await PlaylistEditorExistsAsync();
 
             try
             {
+                Status("Opening Music Playlist Editor...");
                 var result = await _client.Call("ak.wwise.ui.layout.getOrCreateView", new JObject(
                     new JProperty("name", "MusicPlaylistEditor")));
 
                 var viewId = result?["id"]?.ToString();
-                if (canClose && !existedBefore && !string.IsNullOrEmpty(viewId))
+                if (canClose && !existedBefore && string.IsNullOrEmpty(_createdPlaylistViewId)
+                    && !string.IsNullOrEmpty(viewId))
                 {
-                    session.CreatedPlaylistViewId = viewId;
+                    _createdPlaylistViewId = viewId;
+                }
+
+                // For a Music Playlist Container audition, point the editor at the copied playlist so
+                // it shows the audition material, then restore the harness as the inspected object (the
+                // transitions editor follows it). The Playlist Editor keeps showing the playlist even
+                // after we inspect the non-playlist harness.
+                if (Session is { } session
+                    && string.Equals(session.Target.Type, "MusicPlaylistContainer", StringComparison.OrdinalIgnoreCase)
+                    && session.CopyId is { Length: > 0 } copyId)
+                {
+                    await SafeCall(() => Inspect(copyId));
+                    if (session.SwitchContainerId is { Length: > 0 } harnessId)
+                        await SafeCall(() => Inspect(harnessId));
                 }
             }
             catch (Exception ex)
             {
                 Notify($"Failed to open the Music Playlist Editor: {DescribeError(ex)}");
+            }
+        }
+
+        /// <summary>Closes a Music Playlist Editor this tool opened (2025+). No-op otherwise, so
+        /// older versions never see an error.</summary>
+        private async Task CloseCreatedPlaylistEditorAsync()
+        {
+            if (string.IsNullOrEmpty(_createdPlaylistViewId))
+                return;
+
+            var viewId = _createdPlaylistViewId;
+            _createdPlaylistViewId = string.Empty;
+            try
+            {
+                Status($"Closing Music Playlist Editor {viewId}...");
+                await _client.Call("ak.wwise.ui.layout.closeView", new JObject(
+                    new JProperty("viewID", viewId)));
+            }
+            catch (Exception ex)
+            {
+                // Older Wwise versions lack ak.wwise.ui.layout.closeView; leave the view open.
+                Notify($"Could not close the Music Playlist Editor (your Wwise version may not " +
+                       $"support it): {DescribeError(ex)}");
             }
         }
 
@@ -783,23 +811,6 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
                     new JProperty("command", "Inspect"),
                     new JProperty("objects", new JArray(session.Target.Id)))));
-            }
-
-            // Close the Music Playlist Editor only if the tool opened it.
-            if (!string.IsNullOrEmpty(session.CreatedPlaylistViewId))
-            {
-                try
-                {
-                    Status($"Closing Music Playlist Editor {session.CreatedPlaylistViewId}...");
-                    await _client.Call("ak.wwise.ui.layout.closeView", new JObject(
-                        new JProperty("viewID", session.CreatedPlaylistViewId)));
-                }
-                catch (Exception ex)
-                {
-                    // Older Wwise versions lack ak.wwise.ui.layout.closeView; leave the view open.
-                    Notify($"Could not close the Music Playlist Editor (your Wwise version may not " +
-                           $"support it): {DescribeError(ex)}");
-                }
             }
 
             // Exclude the harness before deleting, to dodge the crash-on-deleting-an-included

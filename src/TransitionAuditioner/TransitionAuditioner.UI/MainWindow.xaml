@@ -93,10 +93,6 @@
                 <ComboBoxItem Content="Audio length" />
             </ComboBox>
 
-            <CheckBox Grid.Column="5" Content="Open Playlist Editor" VerticalAlignment="Center"
-                      HorizontalAlignment="Left" Margin="16,0,0,0"
-                      IsChecked="{Binding OpenPlaylistEditor, Mode=TwoWay}" />
-
             <Button Grid.Column="6" Content="Set Up &amp; Audition" Padding="14,6"
                     Command="{Binding SetUpCommand}" />
         </Grid>
@@ -116,6 +112,9 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <Button Content="▶ Play" Command="{Binding PlayCommand}" Margin="0,0,8,0" Padding="14,6" />
                 <Button Content="■ Stop" Command="{Binding StopCommand}" Padding="14,6" />
+                <Button Content="Open Playlist Editor" Margin="8,0,0,0" Padding="14,6"
+                        Command="{Binding OpenPlaylistEditorCommand}"
+                        ToolTip="Open the Music Playlist Editor in Wwise" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Show in Project Explorer"

@@ -25,8 +25,10 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// <summary>How a segment's length is measured when placing the audition cue.</summary>
         SegmentLengthSource LengthSource { get; set; }
 
-        /// <summary>Whether the Music Playlist Editor is opened on reveal (playlist-container targets).</summary>
-        bool OpenPlaylistEditor { get; set; }
+        /// <summary>Opens the Music Playlist Editor in Wwise immediately. Fire-and-forget: on
+        /// Wwise versions older than 2025 the view cannot be closed via WAAPI, so it is left open;
+        /// on 2025+ a view this tool opened is closed again during teardown.</summary>
+        Task OpenPlaylistEditorAsync();
 
         /// <summary>The currently set-up audition, or null if none is active.</summary>
         AuditionSession? Session { get; }

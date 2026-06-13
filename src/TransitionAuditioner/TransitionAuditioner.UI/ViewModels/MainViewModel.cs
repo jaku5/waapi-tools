@@ -99,9 +99,6 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         private int _lengthSourceIndex;
 
-        /// <summary>Whether to open the Music Playlist Editor on setup (playlist targets only).</summary>
-        [ObservableProperty]
-        private bool _openPlaylistEditor = true;
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
@@ -111,6 +108,7 @@ namespace TransitionAuditioner.UI.ViewModels
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
         [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
         [NotifyCanExecuteChangedFor(nameof(StopCommand))]
+        [NotifyCanExecuteChangedFor(nameof(OpenPlaylistEditorCommand))]
         private bool _isReady;
 
         [ObservableProperty]
@@ -119,6 +117,7 @@ namespace TransitionAuditioner.UI.ViewModels
         [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
         [NotifyCanExecuteChangedFor(nameof(StopCommand))]
         [NotifyCanExecuteChangedFor(nameof(PullSelectionCommand))]
+        [NotifyCanExecuteChangedFor(nameof(OpenPlaylistEditorCommand))]
         private bool _isBusy;
 
         /// <summary>Activity log as a single string, newest entry on top, each line timestamped.</summary>
@@ -275,7 +274,6 @@ namespace TransitionAuditioner.UI.ViewModels
 
                 _service.AuditionCueOffsetFromEndMs = (int)Math.Round(OffsetSeconds * 1000.0);
                 _service.LengthSource = (SegmentLengthSource)LengthSourceIndex;
-                _service.OpenPlaylistEditor = OpenPlaylistEditor;
                 await _service.SetUpAuditionAsync(_target);
                 IsReady = true;
 
@@ -296,10 +294,19 @@ namespace TransitionAuditioner.UI.ViewModels
         private bool CanInteract => IsReady && !IsBusy;
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
-        private async Task ShowInExplorerAsync()
+        private async Task ShowInExplorerAsync() => await _service.ShowInProjectExplorerAsync();
+
+        [RelayCommand(CanExecute = nameof(CanInteract))]
+        private async Task OpenPlaylistEditorAsync()
         {
-            _service.OpenPlaylistEditor = OpenPlaylistEditor;
-            await _service.ShowInProjectExplorerAsync();
+            try
+            {
+                await _service.OpenPlaylistEditorAsync();
+            }
+            catch (Exception ex)
+            {
+                Append("✖ " + ex.Message);
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
