@@ -63,7 +63,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         public event EventHandler? Disconnected;
 
         /// <summary>Raised with a short description of the current Wwise selection as it changes.</summary>
-        public event EventHandler<string>? SelectionChanged;
+        public event EventHandler<SelectionInfo>? SelectionChanged;
 
         private int? _selectionSubscriptionId;
 
@@ -109,7 +109,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             // Track the Wwise selection live for the on-screen indicator, and seed it once.
             try
             {
-                var options = new JObject(new JProperty(ReturnKey, new JArray("id", "name", "type")));
+                var options = new JObject(new JProperty(ReturnKey, new JArray("id", "name", "type", "path")));
                 _selectionSubscriptionId = await _client.Subscribe(
                     ak.wwise.ui.selectionChanged, options, OnWwiseSelectionChanged);
 
@@ -128,6 +128,8 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         {
             var objects = json?["objects"] as JArray;
             string text;
+            string id = string.Empty;
+            bool isAuditionable = false;
             if (objects == null || objects.Count == 0)
             {
                 text = "(nothing selected)";
@@ -135,12 +137,19 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             else
             {
                 var first = objects[0];
+                id = first["id"]?.ToString() ?? string.Empty;
                 text = $"{first["name"]} ({first["type"]})";
                 if (objects.Count > 1)
                     text += $"  +{objects.Count - 1} more";
+
+                // Pullable only if it's an interactive-music type and not the tool's own harness —
+                // mirrors the validation in GetSelectedTargetAsync.
+                isAuditionable =
+                    AuditionableTypes.Contains(first["type"]?.ToString() ?? string.Empty) &&
+                    first["path"]?.ToString()?.Contains(HarnessContainerName) != true;
             }
 
-            SelectionChanged?.Invoke(this, text);
+            SelectionChanged?.Invoke(this, new SelectionInfo { Id = id, Text = text, IsAuditionable = isAuditionable });
         }
 
         public void Disconnect()

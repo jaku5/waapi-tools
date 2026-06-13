@@ -38,14 +38,7 @@
         </Grid>
 
         <StackPanel Grid.Row="1" Margin="0,16,0,0">
-            <Border Padding="12,6" CornerRadius="6" Background="#18808080">
-                <StackPanel>
-                    <TextBlock Text="Current Wwise selection" Opacity="0.6" FontSize="12" />
-                    <TextBlock Text="{Binding CurrentSelection}" FontSize="13" TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
-
-            <Border Margin="0,8,0,0" Padding="12,8" CornerRadius="6" Background="#22808080">
+            <Border Padding="12,8" CornerRadius="6" Background="#22808080">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -55,10 +48,12 @@
                         <TextBlock Text="Target" Opacity="0.6" FontSize="12" />
                         <TextBlock Text="{Binding TargetName}" FontSize="15" FontWeight="Medium" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Button Grid.Column="1" Content="Pull Selection" Padding="14,6"
+                    <Button Grid.Column="1" Width="45" Height="35"
                             VerticalAlignment="Center"
                             Command="{Binding PullSelectionCommand}"
-                            ToolTip="Use the object currently selected in Wwise" />
+                            ToolTip="{Binding PullSelectionToolTip}">
+                        <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding PullSelectionIcon}" />
+                    </Button>
                 </Grid>
             </Border>
         </StackPanel>

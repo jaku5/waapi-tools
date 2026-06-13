@@ -11,8 +11,8 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         event EventHandler<string> NotificationRequested;
         event EventHandler Disconnected;
 
-        /// <summary>Raised with a short description of the current Wwise selection as it changes.</summary>
-        event EventHandler<string> SelectionChanged;
+        /// <summary>Raised with the current Wwise selection (description and first object id) as it changes.</summary>
+        event EventHandler<SelectionInfo> SelectionChanged;
 
         bool IsConnected { get; }
         bool IsSetUp { get; }

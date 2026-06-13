@@ -36,7 +36,26 @@ namespace TransitionAuditioner.UI.ViewModels
 
         /// <summary>Live description of the current Wwise selection (independent of the chosen target).</summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(PullSelectionToolTip))]
         private string _currentSelection = "—";
+
+        /// <summary>Id of the first currently-selected Wwise object, used to compare against the target.</summary>
+        private string _currentSelectionId = string.Empty;
+
+        /// <summary>Whether the live selection is a valid, non-harness target that can be pulled.</summary>
+        private bool _selectionIsAuditionable;
+
+        /// <summary>
+        /// Pull-selection glyph: outline (EA63) when the live selection already matches the current
+        /// target, filled (EA64) when it differs — signalling there's a new object to pull.
+        /// </summary>
+        public string PullSelectionIcon =>
+            _currentSelectionId.Length > 0 && _currentSelectionId == _target?.Id
+                ? ""
+                : "";
+
+        public string PullSelectionToolTip =>
+            $"Use the object currently selected in Wwise\nCurrent selection: {CurrentSelection}";
 
         /// <summary>Cue offset from the end of each segment, in seconds (default 1 s).</summary>
         [ObservableProperty]
@@ -81,7 +100,14 @@ namespace TransitionAuditioner.UI.ViewModels
             _service.StatusUpdated += (_, msg) => Append(msg);
             _service.NotificationRequested += (_, msg) => Append("⚠ " + msg);
             _service.Disconnected += (_, _) => Append("Disconnected from Wwise.");
-            _service.SelectionChanged += (_, text) => OnUiThread(() => CurrentSelection = text);
+            _service.SelectionChanged += (_, info) => OnUiThread(() =>
+            {
+                _currentSelectionId = info.Id;
+                _selectionIsAuditionable = info.IsAuditionable;
+                CurrentSelection = info.Text;
+                OnPropertyChanged(nameof(PullSelectionIcon));
+                PullSelectionCommand.NotifyCanExecuteChanged();
+            });
 
             IsDarkTheme = App.IsDarkModeEnabled();
             App.SetTheme(IsDarkTheme);
@@ -151,10 +177,15 @@ namespace TransitionAuditioner.UI.ViewModels
             _target = target;
             TargetName = $"{target.Name}  ({target.Type})";
             HasTarget = true;
+            OnPropertyChanged(nameof(PullSelectionIcon));
+            PullSelectionCommand.NotifyCanExecuteChanged();
             return true;
         }
 
-        private bool CanPull => !IsBusy;
+        // Pullable only when the live selection is a valid, non-harness target that isn't already
+        // the current target.
+        private bool CanPull =>
+            !IsBusy && _selectionIsAuditionable && _currentSelectionId != _target?.Id;
 
         [RelayCommand(CanExecute = nameof(CanPull))]
         private async Task PullSelectionAsync()
@@ -267,4 +298,6 @@ namespace TransitionAuditioner.UI.ViewModels
         }
     }
 }
+
+
 
