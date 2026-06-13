@@ -30,6 +30,7 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(WindowTitle))]
         [NotifyPropertyChangedFor(nameof(ConnectIcon))]
+        [NotifyPropertyChangedFor(nameof(CanConnect))]
         [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
         private bool _isNotConnected = true;
 
@@ -38,9 +39,15 @@ namespace TransitionAuditioner.UI.ViewModels
         [NotifyPropertyChangedFor(nameof(WindowTitle))]
         [NotifyPropertyChangedFor(nameof(ShowConnectingProgress))]
         [NotifyPropertyChangedFor(nameof(ShowConnectionIcon))]
+        [NotifyPropertyChangedFor(nameof(CanConnect))]
         [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
         private bool _isConnecting;
 
+        // Enabled only when disconnected (and not mid-attempt): while connected the button is purely
+        // informational, so there's nothing to click. Both inputs must raise PropertyChanged *and*
+        // NotifyCanExecuteChanged — the button binds IsEnabled to this property but, because it also
+        // has a Command, WPF coerces IsEnabled down to the command's CanExecute, so the two must stay
+        // in sync or a stale CanExecute wins and the button stays disabled.
         public bool CanConnect => IsNotConnected && !IsConnecting;
         public bool ShowConnectingProgress => IsConnecting;
         public bool ShowConnectionIcon => !IsConnecting;
