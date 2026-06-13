@@ -125,14 +125,56 @@
                 </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <!-- Play: normal Fluent look when idle; the whole button goes accent while playback
+                     is active. It stays enabled (the service force-stops before replaying), so a
+                     press during playback just re-triggers the transition cleanly. While playing it
+                     swaps to a plain template (no visual-state manager) so hover/pressed don't alter
+                     the steady accent — the press still fires the command. -->
                 <Button Command="{Binding PlayCommand}" Width="45" Height="35" Margin="0,0,8,0"
                         ToolTip="Play">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border CornerRadius="4" Background="{TemplateBinding Background}">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center" />
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
                     <TextBlock Style="{StaticResource FluentIcon}">&#xF5B0;</TextBlock>
                 </Button>
-                <Button Command="{Binding StopCommand}" Width="45" Height="35"
-                        ToolTip="Stop">
-                    <TextBlock Style="{StaticResource FluentIcon}">&#xEE95;</TextBlock>
-                </Button>
+                <!-- Stop: an accent overlay briefly flashes on press to acknowledge the press, then
+                     fades back out. -->
+                <Grid>
+                    <Button Command="{Binding StopCommand}" Width="45" Height="35"
+                            ToolTip="Stop">
+                        <Button.Triggers>
+                            <EventTrigger RoutedEvent="Button.Click">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="StopFlash"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.7" To="0" Duration="0:0:0.35" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Button.Triggers>
+                        <TextBlock Style="{StaticResource FluentIcon}">&#xEE95;</TextBlock>
+                    </Button>
+                    <Border x:Name="StopFlash" CornerRadius="4" IsHitTestVisible="False"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}" Opacity="0" />
+                </Grid>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Finish &amp; Clean Up"

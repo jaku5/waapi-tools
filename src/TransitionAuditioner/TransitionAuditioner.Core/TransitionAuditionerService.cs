@@ -66,7 +66,11 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// <summary>Raised with a short description of the current Wwise selection as it changes.</summary>
         public event EventHandler<SelectionInfo>? SelectionChanged;
 
+        /// <summary>Raised when this tool's transport starts (true) or stops (false) playing.</summary>
+        public event EventHandler<bool>? PlaybackStateChanged;
+
         private int? _selectionSubscriptionId;
+        private int? _transportSubscriptionId;
 
         public bool IsConnected { get; private set; }
         public bool IsSetUp => Session != null;
@@ -258,6 +262,7 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 if (transport?["transport"] != null)
                 {
                     session.TransportId = transport["transport"]!.Value<int>();
+                    await SubscribeToTransportStateAsync(session.TransportId.Value);
                 }
 
                 Session = session;
@@ -417,6 +422,51 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 _logger.LogWarning(ex, "Failed to query view instances.");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Subscribes to transport state changes so the UI can reflect live playback. The topic is
+        /// global (it fires for every transport), so the handler filters to our own transport id.
+        /// Best-effort: a failed subscription just means no live playback accent, not a broken setup.
+        /// </summary>
+        private async Task SubscribeToTransportStateAsync(int transportId)
+        {
+            try
+            {
+                // This topic requires a 'transport' option naming the watched transport (it is not a
+                // 'return' field list — passing return fields, or omitting transport, makes the
+                // subscribe call fail). Scoped to our transport, every publish is already ours.
+                _transportSubscriptionId = await _client.Subscribe(
+                    ak.wwise.core.transport.stateChanged,
+                    new JObject(new JProperty("transport", transportId)),
+                    json => OnTransportStateChanged(json, transportId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to subscribe to transport state changes.");
+            }
+        }
+
+        private void OnTransportStateChanged(JObject json, int ownTransportId)
+        {
+            // The topic publishes for all transports; ignore anything that isn't ours.
+            if (json["transport"]?.Value<int>() is int id && id != ownTransportId)
+                return;
+
+            // State is one of "playing" / "stopped" / "paused"; only "playing" is active playback.
+            bool playing = string.Equals(json["state"]?.ToString(), "playing", StringComparison.OrdinalIgnoreCase);
+            PlaybackStateChanged?.Invoke(this, playing);
+        }
+
+        /// <summary>Drops the transport-state subscription (best-effort) and reports playback stopped.</summary>
+        private async Task UnsubscribeFromTransportStateAsync()
+        {
+            if (_transportSubscriptionId is not int subId)
+                return;
+
+            _transportSubscriptionId = null;
+            await SafeCall(() => _client.Unsubscribe(subId));
+            PlaybackStateChanged?.Invoke(this, false);
         }
 
         public async Task PlayAsync()
@@ -805,6 +855,10 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// </summary>
         private async Task SafeTeardownAsync(AuditionSession session)
         {
+            // Drop the state subscription first (and report playback stopped) so no stray events
+            // arrive while the transport is being torn down.
+            await UnsubscribeFromTransportStateAsync();
+
             // Stop all transports — covers playback the user may have started on any transport,
             // not just the one we created.
             await SafeCall(() => _client.Call(ak.wwise.core.transport.executeAction, new JObject(

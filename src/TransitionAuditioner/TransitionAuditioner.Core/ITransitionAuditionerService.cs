@@ -14,6 +14,10 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// <summary>Raised with the current Wwise selection (description and first object id) as it changes.</summary>
         event EventHandler<SelectionInfo> SelectionChanged;
 
+        /// <summary>Raised when the audition transport starts or stops playing: true while playing,
+        /// false once stopped. Tracks only this tool's own transport.</summary>
+        event EventHandler<bool> PlaybackStateChanged;
+
         bool IsConnected { get; }
         bool IsSetUp { get; }
         string? ProjectName { get; }

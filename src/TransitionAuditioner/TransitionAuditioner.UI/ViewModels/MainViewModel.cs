@@ -150,6 +150,11 @@ namespace TransitionAuditioner.UI.ViewModels
         [NotifyCanExecuteChangedFor(nameof(OpenPlaylistEditorCommand))]
         private bool _isReady;
 
+        /// <summary>True while the audition transport is playing. Drives the Play button accent.
+        /// Play stays enabled while playing (it force-stops first), so this only affects appearance.</summary>
+        [ObservableProperty]
+        private bool _isPlaying;
+
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
@@ -172,7 +177,9 @@ namespace TransitionAuditioner.UI.ViewModels
             {
                 Append("Disconnected from Wwise.");
                 IsNotConnected = true;
+                IsPlaying = false;
             });
+            _service.PlaybackStateChanged += (_, playing) => OnUiThread(() => IsPlaying = playing);
             _service.SelectionChanged += (_, info) => OnUiThread(() =>
             {
                 _currentSelectionId = info.Id;
@@ -353,7 +360,16 @@ namespace TransitionAuditioner.UI.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
-        private async Task PlayAsync() => await _service.PlayAsync();
+        private async Task PlayAsync()
+        {
+            // Ignore presses while already playing, so a transition can't stack on itself. The
+            // button stays enabled (and lit, with hover suppressed) rather than disabled — disabling
+            // would grey it out and lose the accent. Stop returns to idle via PlaybackStateChanged.
+            if (IsPlaying)
+                return;
+
+            await _service.PlayAsync();
+        }
 
         [RelayCommand(CanExecute = nameof(CanInteract))]
         private async Task StopAsync() => await _service.StopAsync();
