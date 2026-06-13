@@ -41,7 +41,7 @@
                     Background="{DynamicResource LayerOnMicaBaseAltFillColorSecondaryBrush}"
                     VerticalAlignment="Center" HorizontalAlignment="Stretch">
                 <DockPanel>
-                    <Image DockPanel.Dock="Left" Source="{Binding TargetIcon}"
+                    <Image DockPanel.Dock="Left" Source="{Binding TargetIcon, TargetNullValue={x:Null}}"
                            Width="15" Height="15" Margin="0,0,8,0" VerticalAlignment="Center"
                            Visibility="{Binding HasTarget, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <TextBlock Text="{Binding TargetName}" FontSize="18" FontWeight="Medium"
