@@ -11,15 +11,50 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+
+            <Button Grid.Column="0" Command="{Binding ConnectCommand}"
+                    Width="45" Height="35" VerticalAlignment="Center"
+                    ToolTip="Connect to Wwise"
+                    IsEnabled="{Binding CanConnect}">
+                <Grid>
+                    <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConnectIcon}"
+                               Visibility="{Binding ShowConnectionIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <ProgressBar IsIndeterminate="True" Width="20" Height="20"
+                                 Visibility="{Binding ShowConnectingProgress, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </Button>
+
+            <Separator Grid.Column="1" Margin="10,0,10,0" />
+
+            <Border Grid.Column="2" Padding="12,0" CornerRadius="6" Height="35"
+                    Background="{DynamicResource LayerOnMicaBaseAltFillColorSecondaryBrush}"
+                    VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                <TextBlock Text="{Binding TargetName}" FontSize="18" FontWeight="Medium"
+                           VerticalAlignment="Center" HorizontalAlignment="Left"
+                           TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetName}" />
+            </Border>
+
+            <Button Grid.Column="3" Width="45" Height="35" Margin="8,0,0,0"
+                    VerticalAlignment="Center"
+                    Command="{Binding PullSelectionCommand}"
+                    ToolTip="{Binding PullSelectionToolTip}">
+                <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding PullSelectionIcon}" />
+            </Button>
+
+            <Separator Grid.Column="4" Margin="10,0,10,0" />
+
+            <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Command="{Binding ThemeChangeCommand}"
                         Width="45" Height="35" Margin="0,0,10,0"
                         ToolTip="Change app theme">
@@ -33,28 +68,7 @@
             </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="1" Margin="0,16,0,0">
-            <Border Padding="12,8" CornerRadius="6" Background="#22808080">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="Target" Opacity="0.6" FontSize="12" />
-                        <TextBlock Text="{Binding TargetName}" FontSize="15" FontWeight="Medium" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Button Grid.Column="1" Width="45" Height="35"
-                            VerticalAlignment="Center"
-                            Command="{Binding PullSelectionCommand}"
-                            ToolTip="{Binding PullSelectionToolTip}">
-                        <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding PullSelectionIcon}" />
-                    </Button>
-                </Grid>
-            </Border>
-        </StackPanel>
-
-        <Grid Grid.Row="2" Margin="0,12,0,0">
+        <Grid Grid.Row="1" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -87,10 +101,10 @@
                     Command="{Binding SetUpCommand}" />
         </Grid>
 
-        <TextBlock Grid.Row="3" Margin="0,16,0,6" Text="Activity" Opacity="0.6" FontSize="12"
+        <TextBlock Grid.Row="2" Margin="0,16,0,6" Text="Activity" Opacity="0.6" FontSize="12"
                    Visibility="{Binding IsActivityVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <Border Grid.Row="4" Height="240" CornerRadius="6" BorderThickness="1" BorderBrush="#33808080"
+        <Border Grid.Row="3" Height="240" CornerRadius="6" BorderThickness="1" BorderBrush="#33808080"
                 Visibility="{Binding IsActivityVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <TextBox Text="{Binding LogText, Mode=OneWay}"
                      IsReadOnly="True" TextWrapping="Wrap"
@@ -98,7 +112,7 @@
                      VerticalScrollBarVisibility="Auto" />
         </Border>
 
-        <Grid Grid.Row="5" Margin="0,16,0,0">
+        <Grid Grid.Row="4" Margin="0,16,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <Button Content="▶ Play" Command="{Binding PlayCommand}" Margin="0,0,8,0" Padding="14,6" />
                 <Button Content="■ Stop" Command="{Binding StopCommand}" Padding="14,6" />

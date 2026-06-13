@@ -25,14 +25,36 @@ namespace TransitionAuditioner.UI.ViewModels
         [ObservableProperty]
         private bool _isActivityVisible;
 
+        /// <summary>True while no Wwise connection is established. Starts disconnected.</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(WindowTitle))]
+        [NotifyPropertyChangedFor(nameof(ConnectIcon))]
+        [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
+        private bool _isNotConnected = true;
+
+        /// <summary>True while a connection attempt is in flight (button shows a spinner).</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(WindowTitle))]
+        [NotifyPropertyChangedFor(nameof(ShowConnectingProgress))]
+        [NotifyPropertyChangedFor(nameof(ShowConnectionIcon))]
+        [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
+        private bool _isConnecting;
+
+        public bool CanConnect => IsNotConnected && !IsConnecting;
+        public bool ShowConnectingProgress => IsConnecting;
+        public bool ShowConnectionIcon => !IsConnecting;
+
+        /// <summary>Connect-button glyph: broken link when disconnected, linked when connected.</summary>
+        public string ConnectIcon => IsNotConnected ? "" : "";
+
         /// <summary>Window title carrying connection state and the open project / Wwise version.</summary>
         public string WindowTitle
         {
             get
             {
                 const string baseTitle = "Transition Auditioner";
-                if (!_service.IsConnected)
-                    return $"{baseTitle} - [{(IsBusy ? "Connecting..." : "Disconnected")}]";
+                if (IsConnecting) return $"{baseTitle} - [Connecting...]";
+                if (IsNotConnected) return $"{baseTitle} - [Disconnected]";
 
                 string projectPart = !string.IsNullOrEmpty(_service.ProjectName) ? $" - {_service.ProjectName}" : "";
                 string versionPart = !string.IsNullOrEmpty(_service.WwiseVersion) ? $" (Wwise {_service.WwiseVersion})" : "";
@@ -92,7 +114,6 @@ namespace TransitionAuditioner.UI.ViewModels
         private bool _isReady;
 
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(WindowTitle))]
         [NotifyCanExecuteChangedFor(nameof(SetUpCommand))]
         [NotifyCanExecuteChangedFor(nameof(ShowInExplorerCommand))]
         [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
@@ -112,7 +133,7 @@ namespace TransitionAuditioner.UI.ViewModels
             _service.Disconnected += (_, _) => OnUiThread(() =>
             {
                 Append("Disconnected from Wwise.");
-                OnPropertyChanged(nameof(WindowTitle));
+                IsNotConnected = true;
             });
             _service.SelectionChanged += (_, info) => OnUiThread(() =>
             {
@@ -153,13 +174,23 @@ namespace TransitionAuditioner.UI.ViewModels
             });
         }
 
-        /// <summary>Connects and identifies the selected target, but does not build anything yet.</summary>
-        public async Task InitializeAsync()
+        /// <summary>Connects on window load. Reconnect later via the Connect button.</summary>
+        public Task InitializeAsync() => ConnectAsync();
+
+        /// <summary>Connects to Wwise (dropping any existing connection first) and pulls the
+        /// initial target. Drives the Connect button and the window title.</summary>
+        [RelayCommand(CanExecute = nameof(CanConnect))]
+        private async Task ConnectAsync()
         {
-            IsBusy = true;
+            if (IsConnecting) return;
+
+            IsConnecting = true;
             try
             {
+                _service.Disconnect();
                 await _service.ConnectAsync();
+                IsNotConnected = false;
+                Append("Connected to Wwise.");
                 OnPropertyChanged(nameof(WindowTitle));
 
                 if (await RefreshTargetAsync())
@@ -169,11 +200,12 @@ namespace TransitionAuditioner.UI.ViewModels
             }
             catch (Exception ex)
             {
+                IsNotConnected = true;
                 Append("✖ " + ex.Message);
             }
             finally
             {
-                IsBusy = false;
+                IsConnecting = false;
             }
         }
 
@@ -309,6 +341,7 @@ namespace TransitionAuditioner.UI.ViewModels
         }
     }
 }
+
 
 
 
