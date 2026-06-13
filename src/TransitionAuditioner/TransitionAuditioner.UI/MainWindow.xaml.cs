@@ -62,7 +62,11 @@ namespace TransitionAuditioner.UI
             e.Cancel = true;
             _shuttingDown = true;
             await vm.ShutdownAsync();
-            Close();
+
+            // Re-invoke Close() on a fresh dispatcher turn. Calling it directly here can run
+            // while WPF is still unwinding this (cancelled) close, which throws
+            // "Cannot ... Close ... while a Window is closing." from VerifyNotClosing().
+            await Dispatcher.InvokeAsync(Close);
         }
     }
 }
