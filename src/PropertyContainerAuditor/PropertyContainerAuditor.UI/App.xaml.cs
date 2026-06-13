@@ -33,7 +33,7 @@ namespace PropertyContainerAuditor.UI
             mainWindow.Show();
 
             SetTheme(IsDarkModeEnabled());
-            SystemEvents.UserPreferenceChanged += (s, e) => SetTheme(IsDarkModeEnabled());
+            // Ongoing OS theme changes are handled by MainViewModel so the toggle icon stays in sync.
         }
 
         private void ConfigureServices(IServiceCollection services)

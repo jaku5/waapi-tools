@@ -25,7 +25,7 @@ namespace TransitionAuditioner.UI
             mainWindow.Show();
 
             SetTheme(IsDarkModeEnabled());
-            SystemEvents.UserPreferenceChanged += (_, _) => SetTheme(IsDarkModeEnabled());
+            // Ongoing OS theme changes are handled by MainViewModel so the toggle icon stays in sync.
         }
 
         private static void ConfigureServices(IServiceCollection services)

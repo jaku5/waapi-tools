@@ -7,6 +7,15 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <FontFamily x:Key="FluentIcons">Segoe Fluent Icons</FontFamily>
+
+            <Style x:Key="FluentIcon" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource FluentIcons}" />
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

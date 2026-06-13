@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using JPAudio.WaapiTools.Tool.TransitionAuditioner.Core;
 using JPAudio.WaapiTools.Tool.TransitionAuditioner.Core.Models;
 
@@ -13,6 +14,13 @@ namespace TransitionAuditioner.UI.ViewModels
     {
         private readonly ITransitionAuditionerService _service;
         private MusicObjectInfo? _target;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ThemeIcon))]
+        private bool _isDarkTheme;
+
+        /// <summary>Segoe Fluent glyph for the theme toggle: sun when dark (switch to light), moon when light.</summary>
+        public string ThemeIcon => IsDarkTheme ? "" : "";
 
         [ObservableProperty]
         private string _header = "Transition Auditioner";
@@ -69,6 +77,32 @@ namespace TransitionAuditioner.UI.ViewModels
             _service.NotificationRequested += (_, msg) => Append("⚠ " + msg);
             _service.Disconnected += (_, _) => Append("Disconnected from Wwise.");
             _service.SelectionChanged += (_, text) => OnUiThread(() => CurrentSelection = text);
+
+            IsDarkTheme = App.IsDarkModeEnabled();
+            App.SetTheme(IsDarkTheme);
+
+            // Follow the OS light/dark setting while running, keeping the toggle icon in sync.
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+        }
+
+        [RelayCommand]
+        private void ThemeChange()
+        {
+            IsDarkTheme = !IsDarkTheme;
+            App.SetTheme(IsDarkTheme);
+        }
+
+        private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category != UserPreferenceCategory.General)
+                return;
+
+            // SystemEvents fires on a background thread — marshal to the UI thread.
+            OnUiThread(() =>
+            {
+                IsDarkTheme = App.IsDarkModeEnabled();
+                App.SetTheme(IsDarkTheme);
+            });
         }
 
         /// <summary>Connects and identifies the selected target, but does not build anything yet.</summary>
@@ -224,3 +258,4 @@ namespace TransitionAuditioner.UI.ViewModels
         }
     }
 }
+

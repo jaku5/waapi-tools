@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using JPAudio.WaapiTools.Tool.PropertyContainerAuditor.Core;
 using JPAudio.WaapiTools.Tool.PropertyContainerAuditor.Core.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -267,6 +268,9 @@ namespace PropertyContainerAuditor.UI.ViewModels
             IsDarkTheme = App.IsDarkModeEnabled();
             App.SetTheme(IsDarkTheme);
 
+            // Follow the OS light/dark setting while running, keeping the toggle icon in sync.
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+
             _ = ConnectAsync();
         }
 
@@ -376,6 +380,19 @@ namespace PropertyContainerAuditor.UI.ViewModels
         {
             IsDarkTheme = !IsDarkTheme;
             App.SetTheme(IsDarkTheme);
+        }
+
+        private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category != UserPreferenceCategory.General)
+                return;
+
+            // SystemEvents fires on a background thread — marshal to the UI thread.
+            _ = _dispatcherService.InvokeAsync(() =>
+            {
+                IsDarkTheme = App.IsDarkModeEnabled();
+                App.SetTheme(IsDarkTheme);
+            });
         }
 
         private async Task ConnectAsync()

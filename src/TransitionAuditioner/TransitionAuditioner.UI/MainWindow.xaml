@@ -14,10 +14,21 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
-            <TextBlock Text="{Binding Header}" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SubHeader}" Opacity="0.7" Margin="0,2,0,0" TextWrapping="Wrap" />
-        </StackPanel>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="{Binding Header}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding SubHeader}" Opacity="0.7" Margin="0,2,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Command="{Binding ThemeChangeCommand}"
+                    Width="45" Height="35" VerticalAlignment="Top"
+                    ToolTip="Change app theme">
+                <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ThemeIcon}" />
+            </Button>
+        </Grid>
 
         <StackPanel Grid.Row="1" Margin="0,16,0,0">
             <Border Padding="12,6" CornerRadius="6" Background="#18808080">
