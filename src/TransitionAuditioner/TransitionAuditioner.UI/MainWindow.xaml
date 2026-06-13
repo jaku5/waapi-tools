@@ -120,7 +120,7 @@
                     <TextBlock Style="{StaticResource FluentIcon}">&#xE7AC;</TextBlock>
                 </Button>
                 <Button Command="{Binding OpenPlaylistEditorCommand}" Width="45" Height="35"
-                        ToolTip="Open the Music Playlist Editor in Wwise">
+                        ToolTip="{Binding OpenPlaylistEditorToolTip}">
                     <TextBlock Style="{StaticResource FluentIcon}">&#xE8A4;</TextBlock>
                 </Button>
             </StackPanel>

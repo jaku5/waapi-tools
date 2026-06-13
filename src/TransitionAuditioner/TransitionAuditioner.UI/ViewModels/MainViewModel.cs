@@ -63,6 +63,13 @@ namespace TransitionAuditioner.UI.ViewModels
             }
         }
 
+        /// <summary>Playlist-editor button tooltip. On Wwise 2024+ the tool opens the editor; on 2023
+        /// (no getOrCreateView) it can only inspect the copied playlist, so the wording reflects that
+        /// the user must open the editor themselves first.</summary>
+        public string OpenPlaylistEditorToolTip => _service.CanCreatePlaylistEditorView
+            ? "Open the Music Playlist Editor in Wwise"
+            : "Show the copied playlist in Wwise (open a Music Playlist Editor there first)";
+
         [ObservableProperty]
         private string _targetName = "—";
 
@@ -216,6 +223,7 @@ namespace TransitionAuditioner.UI.ViewModels
                 IsNotConnected = false;
                 Append("Connected to Wwise.");
                 OnPropertyChanged(nameof(WindowTitle));
+                OnPropertyChanged(nameof(OpenPlaylistEditorToolTip));
 
                 if (await RefreshTargetAsync())
                     Append("Ready. Set the cue offset, then click Set Up & Audition.");

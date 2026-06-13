@@ -74,8 +74,14 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         public string? WwiseVersion { get; private set; }
         public AuditionSession? Session { get; private set; }
 
-        // Wwise major version (year). ak.wwise.ui.layout.closeView only exists from 2025 onward.
+        // Wwise major version (year). ak.wwise.ui.layout.closeView only exists from 2025 onward,
+        // and ak.wwise.ui.layout.getOrCreateView only from 2024 onward.
         private int _wwiseYear;
+
+        /// <summary>True when this Wwise version can open a view via WAAPI
+        /// (ak.wwise.ui.layout.getOrCreateView, 2024+). On 2023 we can only inspect the copied
+        /// playlist so a Playlist Editor the user opened themselves shows the audition material.</summary>
+        public bool CanCreatePlaylistEditorView => _wwiseYear >= 2024;
 
         public TransitionAuditionerService(IJsonClient client, ILogger<TransitionAuditionerService> logger)
         {
@@ -326,6 +332,16 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
         /// </summary>
         public async Task OpenPlaylistEditorAsync()
         {
+            // Wwise 2023 lacks ak.wwise.ui.layout.getOrCreateView, so we can't open the view for the
+            // user. Fall back to just inspecting the copied playlist: if the user already has a
+            // Playlist Editor open, it follows the inspection and shows the audition material.
+            if (!CanCreatePlaylistEditorView)
+            {
+                Status("Inspecting the copied playlist (open a Music Playlist Editor in Wwise to see it)...");
+                await InspectCopiedPlaylistAsync();
+                return;
+            }
+
             bool canClose = _wwiseYear >= 2025;
             bool existedBefore = canClose && await PlaylistEditorExistsAsync();
 
@@ -342,22 +358,27 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                     _createdPlaylistViewId = viewId;
                 }
 
-                // For a Music Playlist Container audition, point the editor at the copied playlist so
-                // it shows the audition material, then restore the harness as the inspected object (the
-                // transitions editor follows it). The Playlist Editor keeps showing the playlist even
-                // after we inspect the non-playlist harness.
-                if (Session is { } session
-                    && string.Equals(session.Target.Type, "MusicPlaylistContainer", StringComparison.OrdinalIgnoreCase)
-                    && session.CopyId is { Length: > 0 } copyId)
-                {
-                    await SafeCall(() => Inspect(copyId));
-                    if (session.SwitchContainerId is { Length: > 0 } harnessId)
-                        await SafeCall(() => Inspect(harnessId));
-                }
+                await InspectCopiedPlaylistAsync();
             }
             catch (Exception ex)
             {
                 Notify($"Failed to open the Music Playlist Editor: {DescribeError(ex)}");
+            }
+        }
+
+        /// <summary>For a Music Playlist Container audition, points the editor at the copied playlist so
+        /// it shows the audition material, then restores the harness as the inspected object (the
+        /// transitions editor follows it). The Playlist Editor keeps showing the playlist even after we
+        /// inspect the non-playlist harness.</summary>
+        private async Task InspectCopiedPlaylistAsync()
+        {
+            if (Session is { } session
+                && string.Equals(session.Target.Type, "MusicPlaylistContainer", StringComparison.OrdinalIgnoreCase)
+                && session.CopyId is { Length: > 0 } copyId)
+            {
+                await SafeCall(() => Inspect(copyId));
+                if (session.SwitchContainerId is { Length: > 0 } harnessId)
+                    await SafeCall(() => Inspect(harnessId));
             }
         }
 
