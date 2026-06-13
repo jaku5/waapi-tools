@@ -9,7 +9,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -105,7 +105,7 @@
         <TextBlock Grid.Row="2" Margin="0,16,0,6" Text="Activity" Opacity="0.6" FontSize="12"
                    Visibility="{Binding IsActivityVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <Border Grid.Row="3" Height="240" CornerRadius="6" BorderThickness="1" BorderBrush="#33808080"
+        <Border Grid.Row="3" CornerRadius="6" BorderThickness="1" BorderBrush="#33808080"
                 Visibility="{Binding IsActivityVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <TextBox Text="{Binding LogText, Mode=OneWay}"
                      IsReadOnly="True" TextWrapping="Wrap"

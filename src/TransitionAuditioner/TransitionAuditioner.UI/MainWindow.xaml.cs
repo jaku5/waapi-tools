@@ -8,6 +8,10 @@ namespace TransitionAuditioner.UI
     {
         private bool _shuttingDown;
 
+        // Remembered window height while the Activity panel is open, so toggling it off and on
+        // restores the user's chosen size. 0 until the panel is first shown.
+        private double _expandedHeight;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -19,7 +23,32 @@ namespace TransitionAuditioner.UI
         {
             if (DataContext is MainViewModel vm)
             {
+                vm.PropertyChanged += OnViewModelPropertyChanged;
                 await vm.InitializeAsync();
+            }
+        }
+
+        // The Activity panel fills a star row. When it's hidden the window auto-sizes to its
+        // (compact) content; when it's shown we switch to a fixed height so the panel has room and
+        // the window edge becomes a resize handle for it.
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(MainViewModel.IsActivityVisible) || DataContext is not MainViewModel vm)
+                return;
+
+            if (vm.IsActivityVisible)
+            {
+                var compactHeight = ActualHeight;
+                SizeToContent = SizeToContent.Manual;
+                // Keep at least ~120px of panel so it can't be dragged away entirely.
+                MinHeight = compactHeight + 120;
+                Height = _expandedHeight > 0 ? _expandedHeight : compactHeight + 260;
+            }
+            else
+            {
+                _expandedHeight = ActualHeight;
+                MinHeight = 0;
+                SizeToContent = SizeToContent.Height;
             }
         }
 
