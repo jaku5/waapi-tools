@@ -16,6 +16,7 @@ namespace TransitionAuditioner.UI.ViewModels
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(ThemeIcon))]
+        [NotifyPropertyChangedFor(nameof(TargetIcon))]
         private bool _isDarkTheme;
 
         /// <summary>Segoe Fluent glyph for the theme toggle: sun when dark (switch to light), moon when light.</summary>
@@ -64,6 +65,30 @@ namespace TransitionAuditioner.UI.ViewModels
 
         [ObservableProperty]
         private string _targetName = "—";
+
+        /// <summary>Theme-aware Wwise object icon for the current target's type, or null when there is
+        /// no target (the bound Image is hidden via HasTarget in that case).</summary>
+        public string? TargetIcon
+        {
+            get
+            {
+                var baseName = _target?.Type switch
+                {
+                    not null when Is(_target.Type, "MusicSwitchContainer") => "ObjectIcons_MusicSwitchContainer",
+                    not null when Is(_target.Type, "MusicPlaylistContainer") => "ObjectIcons_MusicRandomSequenceContainer",
+                    not null when Is(_target.Type, "MusicSegment") => "ObjectIcons_MusicSegment",
+                    _ => null,
+                };
+                if (baseName is null)
+                    return null;
+
+                var suffix = IsDarkTheme ? "_nor_light" : "_nor";
+                return $"pack://application:,,,/TransitionAuditioner;component/Resources/{baseName}{suffix}.png";
+            }
+        }
+
+        private static bool Is(string type, string expected) =>
+            string.Equals(type, expected, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Live description of the current Wwise selection (independent of the chosen target).</summary>
         [ObservableProperty]
@@ -217,9 +242,12 @@ namespace TransitionAuditioner.UI.ViewModels
                 return false;
 
             _target = target;
-            TargetName = $"{target.Name}  ({target.Type})";
+            // Just the name in the box — the type is conveyed by the icon (and stays in the Pull
+            // button tooltip via the live selection text).
+            TargetName = target.Name;
             HasTarget = true;
             OnPropertyChanged(nameof(PullSelectionIcon));
+            OnPropertyChanged(nameof(TargetIcon));
             PullSelectionCommand.NotifyCanExecuteChanged();
             return true;
         }

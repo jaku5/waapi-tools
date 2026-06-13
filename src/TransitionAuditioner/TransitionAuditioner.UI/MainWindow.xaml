@@ -40,9 +40,14 @@
             <Border Grid.Column="2" Padding="12,0" CornerRadius="6" Height="35"
                     Background="{DynamicResource LayerOnMicaBaseAltFillColorSecondaryBrush}"
                     VerticalAlignment="Center" HorizontalAlignment="Stretch">
-                <TextBlock Text="{Binding TargetName}" FontSize="18" FontWeight="Medium"
-                           VerticalAlignment="Center" HorizontalAlignment="Left"
-                           TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetName}" />
+                <DockPanel>
+                    <Image DockPanel.Dock="Left" Source="{Binding TargetIcon}"
+                           Width="15" Height="15" Margin="0,0,8,0" VerticalAlignment="Center"
+                           Visibility="{Binding HasTarget, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBlock Text="{Binding TargetName}" FontSize="18" FontWeight="Medium"
+                               VerticalAlignment="Center" HorizontalAlignment="Left"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetName}" />
+                </DockPanel>
             </Border>
 
             <Button Grid.Column="3" Width="45" Height="35" Margin="8,0,0,0"
@@ -88,7 +93,7 @@
                        VerticalAlignment="Center" Margin="0,0,8,0" />
             <ComboBox Grid.Column="4" Width="150" VerticalAlignment="Center"
                       SelectedIndex="{Binding LengthSourceIndex, Mode=TwoWay}">
-                <ComboBoxItem Content="Exit cue (default)" />
+                <ComboBoxItem Content="Exit cue" />
                 <ComboBoxItem Content="Segment end" />
                 <ComboBoxItem Content="Audio length" />
             </ComboBox>

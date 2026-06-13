@@ -31,6 +31,24 @@
 		<Resource Include="..\..\Resources\jplogo.png">
 			<Link>Resources\jplogo.png</Link>
 		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_MusicSwitchContainer_nor.png">
+			<Link>Resources\ObjectIcons_MusicSwitchContainer_nor.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_MusicSwitchContainer_nor_light.png">
+			<Link>Resources\ObjectIcons_MusicSwitchContainer_nor_light.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_MusicRandomSequenceContainer_nor.png">
+			<Link>Resources\ObjectIcons_MusicRandomSequenceContainer_nor.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_MusicRandomSequenceContainer_nor_light.png">
+			<Link>Resources\ObjectIcons_MusicRandomSequenceContainer_nor_light.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_MusicSegment_nor.png">
+			<Link>Resources\ObjectIcons_MusicSegment_nor.png</Link>
+		</Resource>
+		<Resource Include="..\..\Resources\ObjectIcons_MusicSegment_nor_light.png">
+			<Link>Resources\ObjectIcons_MusicSegment_nor_light.png</Link>
+		</Resource>
 	</ItemGroup>
 
 </Project>
