@@ -24,44 +24,45 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" Command="{Binding ConnectCommand}"
-                    Width="45" Height="35" VerticalAlignment="Center"
+                    Width="60" Height="45" VerticalAlignment="Center"
                     ToolTip="Connect to Wwise"
                     IsEnabled="{Binding CanConnect}">
                 <Grid>
                     <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ConnectIcon}"
                                Visibility="{Binding ShowConnectionIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ProgressBar IsIndeterminate="True" Width="20" Height="20"
-                                 Visibility="{Binding ShowConnectingProgress, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                 Visibility="{Binding ShowConnectingProgress, Converter={StaticResource BooleanToVisibilityConverter}}" HorizontalAlignment="Left" />
                 </Grid>
             </Button>
 
             <Separator Grid.Column="1" Margin="10,0,10,0" />
 
-            <Border Grid.Column="2" Padding="12,0" CornerRadius="6" Height="35"
+            <Border Grid.Column="2" Padding="12,0" CornerRadius="6" Height="45"
                     Background="{DynamicResource LayerOnMicaBaseAltFillColorSecondaryBrush}"
                     VerticalAlignment="Center" HorizontalAlignment="Stretch">
                 <DockPanel>
                     <Image DockPanel.Dock="Left" Source="{Binding TargetIcon, TargetNullValue={x:Null}}"
-                           Width="15" Height="15" Margin="0,0,8,0" VerticalAlignment="Center"
+                           Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"
                            Visibility="{Binding HasTarget, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <TextBlock Text="{Binding TargetName}" FontSize="18" FontWeight="Medium"
+                    <TextBlock Text="{Binding TargetName}" FontSize="22" FontWeight="Medium"
                                VerticalAlignment="Center" HorizontalAlignment="Left"
                                TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetName}" />
                 </DockPanel>
             </Border>
 
-            <Button Grid.Column="3" Width="45" Height="35" Margin="8,0,0,0"
+            <Button Grid.Column="3" Width="60" Height="45" Margin="8,0,0,0"
                     VerticalAlignment="Center"
                     Command="{Binding PullSelectionCommand}"
                     ToolTip="{Binding PullSelectionToolTip}">
                 <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding PullSelectionIcon}" />
             </Button>
 
-            <Separator Grid.Column="4" Margin="10,0,10,0" />
+            <Separator Grid.Column="4" Margin="10,0,10,0" Visibility="Hidden"/>
 
-            <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
                 <Button Command="{Binding ThemeChangeCommand}"
                         Width="45" Height="35" Margin="0,0,10,0"
+                        
                         ToolTip="Change app theme">
                     <TextBlock Style="{StaticResource FluentIcon}" Text="{Binding ThemeIcon}" />
                 </Button>
@@ -115,11 +116,11 @@
 
         <Grid Grid.Row="4" Margin="0,16,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Command="{Binding ShowInExplorerCommand}" Width="45" Height="35" Margin="0,0,8,0"
+                <Button Command="{Binding ShowInExplorerCommand}" Width="60" Height="45" Margin="0,0,8,0"
                         ToolTip="Show in Project Explorer">
                     <TextBlock Style="{StaticResource FluentIcon}">&#xE7AC;</TextBlock>
                 </Button>
-                <Button Command="{Binding OpenPlaylistEditorCommand}" Width="45" Height="35"
+                <Button Command="{Binding OpenPlaylistEditorCommand}" Width="60" Height="45"
                         ToolTip="{Binding OpenPlaylistEditorToolTip}">
                     <TextBlock Style="{StaticResource FluentIcon}">&#xE8A4;</TextBlock>
                 </Button>
@@ -130,7 +131,7 @@
                      press during playback just re-triggers the transition cleanly. While playing it
                      swaps to a plain template (no visual-state manager) so hover/pressed don't alter
                      the steady accent — the press still fires the command. -->
-                <Button Command="{Binding PlayCommand}" Width="45" Height="35" Margin="0,0,8,0"
+                <Button Command="{Binding PlayCommand}" Width="60" Height="45" Margin="0,0,8,0"
                         ToolTip="Play">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -157,7 +158,7 @@
                 <!-- Stop: an accent overlay briefly flashes on press to acknowledge the press, then
                      fades back out. -->
                 <Grid>
-                    <Button Command="{Binding StopCommand}" Width="45" Height="35"
+                    <Button Command="{Binding StopCommand}" Width="60" Height="45"
                             ToolTip="Stop">
                         <Button.Triggers>
                             <EventTrigger RoutedEvent="Button.Click">
