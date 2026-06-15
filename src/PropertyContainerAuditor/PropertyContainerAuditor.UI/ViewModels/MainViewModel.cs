@@ -215,8 +215,8 @@ namespace PropertyContainerAuditor.UI.ViewModels
             }
         }
 
-        public string ActorIcon => _isDarkTheme ? "pack://application:,,,/PropertyContainerAuditor.UI;component/Resources/ObjectIcons_ActorMixer_nor_light.png" : "pack://application:,,,/PropertyContainerAuditor.UI;component/Resources/ObjectIcons_ActorMixer_nor.png";
-        public string FolderIcon => _isDarkTheme ? "pack://application:,,,/PropertyContainerAuditor.UI;component/Resources/ObjectIcons_Folder_nor_light.png" : "pack://application:,,,/PropertyContainerAuditor.UI;component/Resources/ObjectIcons_Folder_nor.png";
+        public string ActorIcon => _isDarkTheme ? "pack://application:,,,/Resources/ObjectIcons_ActorMixer_nor_light.png" : "pack://application:,,,/Resources/ObjectIcons_ActorMixer_nor.png";
+        public string FolderIcon => _isDarkTheme ? "pack://application:,,,/Resources/ObjectIcons_Folder_nor_light.png" : "pack://application:,,,/Resources/ObjectIcons_Folder_nor.png";
         public string ThemeIcon => _isDarkTheme ? "\uE706" : "\uEC46";
         public string ConnectIcon => IsNotConnected ? "\ueb55" : "\uec64";
         public bool IsConnectIconFilled => IsNotConnected;

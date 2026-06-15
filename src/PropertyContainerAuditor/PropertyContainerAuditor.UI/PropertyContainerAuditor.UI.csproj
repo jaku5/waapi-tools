@@ -14,6 +14,8 @@
 		<PublishReadyToRun>false</PublishReadyToRun>
 		<ApplicationIcon>..\..\Resources\jplogo.ico</ApplicationIcon>
 		<Win32Icon>..\..\Resources\jplogo.ico</Win32Icon>
+		<RootNamespace>PropertyContainerAuditor.UI</RootNamespace>
+		<AssemblyName>PropertyContainerAuditor</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -43,7 +45,4 @@
 			<Link>Resources\jplogo.png</Link>
 		</Resource>
 	</ItemGroup>
-
-
-
 </Project>
