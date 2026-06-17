@@ -117,6 +117,12 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                 _logger.LogWarning("Failed to fetch project info: {Message}", ex.Message);
             }
 
+            // Recover anything a previous session leaked on an abnormal exit (a hard crash, or the
+            // debugger's Stop button): graceful teardown never runs in those cases, so the harness and
+            // its playback can linger. Done before seeding the selection so the indicator reflects the
+            // cleaned-up state.
+            await RecoverLeakedAuditionsAsync();
+
             // Track the Wwise selection live for the on-screen indicator, and seed it once.
             try
             {
@@ -131,6 +137,73 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
             {
                 _logger.LogWarning("Failed to subscribe to selection changes: {Message}", ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Cleans up after a previous session that exited abnormally (a crash or the debugger's Stop
+        /// button), where graceful teardown never ran: stops any lingering transport playback and
+        /// deletes any leaked harness containers (found by their deliberately-unique name). Best-effort
+        /// — every step is wrapped so a failure here never blocks connecting.
+        ///
+        /// Note: this stops <em>all</em> transports, so it also stops any unrelated playback the user
+        /// had running in Wwise when the tool connected — acceptable on a fresh connect, and it is the
+        /// cheap stop we are trialling before reaching for ak.soundengine.stopAll.
+        /// </summary>
+        private async Task RecoverLeakedAuditionsAsync()
+        {
+            // Find leaked harnesses first: a successful sweep is the only time we want to advertise
+            // recovery, and the stop is only meaningful if there is something to stop.
+            JArray? leaked = null;
+            try
+            {
+                // onNameConflict:"rename" means a leak may be named "...DELETE_ME(1)" etc., so match by
+                // substring (WAQL ':'). The harness is always a MusicSwitchContainer.
+                var result = await QueryAsync(
+                    $"$ from type MusicSwitchContainer where name : \"{HarnessContainerName}\"",
+                    new[] { "id", "name", "parent" });
+                leaked = result?[ReturnKey] as JArray;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not scan for leaked audition harnesses.");
+                return;
+            }
+
+            if (leaked == null || leaked.Count == 0)
+                return;
+
+            Status($"Found {leaked.Count} leftover audition harness(es) from a previous session — cleaning up...");
+
+            // Stop any lingering playback before deleting: silences an orphaned audition immediately,
+            // and avoids deleting a harness mid-playback (which can crash Wwise). Omitting the transport
+            // id targets every transport. NOTE: WAAPI transports are scoped to the connection that
+            // created them, so if the orphan's transport belonged to the dead session this may not reach
+            // it — that is exactly the assumption this cheap path is here to test in the wild.
+            await SafeCall(() => _client.Call(ak.wwise.core.transport.executeAction, new JObject(
+                new JProperty("action", "stop"))));
+
+            foreach (var harness in leaked)
+            {
+                var harnessId = harness["id"]?.ToString();
+                if (string.IsNullOrEmpty(harnessId))
+                    continue;
+
+                // Move the tree selection and the inspector off the temp structure before deleting it:
+                // deleting while one of its descendants is selected/inspected can crash Wwise. Point both
+                // at the harness's parent, which lives outside the structure being deleted.
+                var parentId = harness["parent"]?["id"]?.ToString();
+                if (!string.IsNullOrEmpty(parentId))
+                {
+                    await SafeCall(() => _client.Call(ak.wwise.ui.commands.execute, new JObject(
+                        new JProperty("command", "FindInProjectExplorerSelectionChannel1"),
+                        new JProperty("objects", new JArray(parentId)))));
+                    await SafeCall(() => Inspect(parentId));
+                }
+
+                await DeleteHarnessAsync(harnessId);
+            }
+
+            Status("Removed leftover audition harness(es) from a previous session.");
         }
 
         private void OnWwiseSelectionChanged(JObject json) => RaiseSelection(json);
@@ -889,21 +962,24 @@ namespace JPAudio.WaapiTools.Tool.TransitionAuditioner.Core
                     new JProperty("objects", new JArray(session.Target.Id)))));
             }
 
-            // Exclude the harness before deleting, to dodge the crash-on-deleting-an-included
-            // interactive-music-object bug. Inclusion only affects SoundBank generation, so this
-            // has no side effects on a throwaway object that is never saved. The exclude + delete
-            // are grouped so they collapse into a single undo entry.
             if (!string.IsNullOrEmpty(session.SwitchContainerId))
-            {
-                await SafeCall(() => _client.Call(ak.wwise.core.undo.beginGroup));
-                await SafeCall(() => SetInclusionAsync(session.SwitchContainerId, false));
+                await DeleteHarnessAsync(session.SwitchContainerId);
+        }
 
-                // Delete the harness — its whole subtree (copy, cues, transition rule) goes with it.
-                await SafeCall(() => _client.Call(ak.wwise.core.@object.delete, new JObject(
-                    new JProperty("object", session.SwitchContainerId))));
-                await SafeCall(() => _client.Call(ak.wwise.core.undo.endGroup, new JObject(
-                    new JProperty("displayName", "Remove transition audition"))));
-            }
+        /// <summary>
+        /// Excludes then deletes a harness container — its whole subtree (copy, cues, transition rule)
+        /// goes with it — as a single undo entry. Excluding first dodges the crash-on-deleting-an-included
+        /// interactive-music-object bug; Inclusion only affects SoundBank generation, so it has no side
+        /// effects on a throwaway object that is never saved. Best-effort: every step is wrapped.
+        /// </summary>
+        private async Task DeleteHarnessAsync(string harnessId)
+        {
+            await SafeCall(() => _client.Call(ak.wwise.core.undo.beginGroup));
+            await SafeCall(() => SetInclusionAsync(harnessId, false));
+            await SafeCall(() => _client.Call(ak.wwise.core.@object.delete, new JObject(
+                new JProperty("object", harnessId))));
+            await SafeCall(() => _client.Call(ak.wwise.core.undo.endGroup, new JObject(
+                new JProperty("displayName", "Remove transition audition"))));
         }
 
         private Task SetInclusionAsync(string objectId, bool included)
