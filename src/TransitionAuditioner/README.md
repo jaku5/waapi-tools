@@ -10,6 +10,7 @@ Wwise 2026 introduces [Music Playlist Seek](https://www.audiokinetic.com/en/publ
 On those versions, to hear one specific transition you often have to start playback well before it and listen through the whole segment, then redo your transition and wait again to audition the change. This way of working is not only time consuming but decreases focus and flow. This tool automates a community workaround technique (wrapping the structure in a parent Music Switch Container with a *Jump to playlist item* + custom-cue transition rule) so that checking one transition becomes a one-step action.
 
 ## How it works
+![TransitionAuditionerDemo](../../images/TransitionAuditioner_demo_small.gif)
 1. In Wwise, **select** a Music Switch Container, Music Playlist Container, or Music Segment in the Project Explorer.
 2. Run **Extra → Audition Music Transition**. The tool connects and shows the selected target. To change the target later without reopening, select a different object in Wwise and click **Pull Selection**.
 3. Set the **cue offset from end** (in seconds, default 1 s) and the **length basis** — *Exit cue* (where the transition fires, the default), *Segment end* (the segment's `@EndPosition`, including any post-exit tail), or *Audio length* (the longest audio source's trimmed duration) — then click **Set Up & Audition**. The tool:
